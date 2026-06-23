@@ -1,0 +1,110 @@
+[
+  {
+    "id": "msg-1780315246209-kq52ph",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 开始前端页面开发\n\n参考竞品（驾考宝典、驾校一点通）的设计风格，请按以下优先级开始页面编码：\n\n### P0 首页与核心链路（今天先做）\n1. **Layout 组件**：TopNav + Sidebar + 学员端主布局\n2. **LoginView.vue**：登录/注册，双Tab（邮箱+手机号），参考竞品简洁设计\n3. **HomeView.vue**：学员学习首页仪表盘，参考竞品卡片式布局\n   - 个人档案卡\n   - 今日学习任务\n   - 能力雷达图（ECharts）\n   - 快速入口：科目一训练/科目四训练/全真模拟\n\n### 竞品参考要点\n- 顶部导航：清晰的功能入口\n- 轮播 Banner：突出核心功能\n- 卡片式布局：科目一/科目四模块入口\n- 学车流程导览：找驾校→科目一...→拿本\n- 底部：城市导航 + 二维码\n\n### 要求\n- 纯前端 Mock 数据，不依赖后端\n- 每个页面使用 MSW 提供 Mock API\n- 所有组件按已有架构文档的目录结构存放\n- 生成可运行的 `.vue` 单文件组件\n\n开始产出 LoginView 和 HomeView，完成后通知验收。\n",
+    "timestamp": "2026-06-01T12:00:46.209Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780315247683-gv3un6",
+    "from": "团队协调员",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 项目进入前端页面开发阶段\n\n参考竞品（驾考宝典、驾校一点通）已提供截图，前端开始编写具体页面代码。\n\n后端工程师：仅提供API咨询和Mock支持，不参与后端代码编写。\n\n请各成员准备就位。\n\n你的任务：主责页面开发。",
+    "timestamp": "2026-06-01T12:00:47.683Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780315360564-qoqi86",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 📊 竞品分析已出，请按以下设计升级 HomeView\n\n需求分析师已完成驾考宝典/驾校一点通竞品分析。HomeView 做以下调整：\n\n### P0 必须实现（本次交付）\n1. **角色化欢迎区**：学员→\"张三，今日距考试还有14天\"；教练→\"李教练，您有35名学员\"；管理员→数据总览\n2. **科目分类入口升级**：首页核心模块从4个文字按钮升级为**大卡片**：\n   ```\n   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐\n   │   科目一      │  │   科目四      │  │  从业资格证   │\n   │ 🚗 小车理论   │  │ 🔒 安全文明   │  │ 🚛 客运/货运  │\n   │  已学 75%    │  │  已学 40%    │  │  危化品运输   │\n   │  [开始练习]   │  │  [开始练习]   │  │  [进入课程]   │\n   └──────────────┘  └──────────────┘  └──────────────┘\n   ```\n3. **个人档案卡片** + **四维度雷达图** + **今日任务清单** + **知识树**（保持现有设计）\n4. **考前冲刺入口**（条件展示：距考试≤14天时显示倒计时+冲刺按钮）\n\n### P1 建议包含\n5. **学车流程进度条**：测评→学习→练习→模拟考→冲刺 线性进度\n6. **教练信息卡片**：已绑定教练的学员显示教练姓名+电话+快捷联系\n7. **AI 特色能力突出**：首页增加 AI 问答快捷悬浮按钮（\"🤖 有疑问？问AI\"）\n\n### 竞品差异化突出\n我们的9大优势：AI问答 | 学习路径 | 能力雷达图 | 场景模拟 | 易混训练 | 热力图 | 勋章系统 | 教练AI建议 | 运输培训\n\n**以上内容不要求一次全做完**——先出 LoginView + HomeView 第一版代码，逐步迭代。\n",
+    "timestamp": "2026-06-01T12:02:40.564Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780315398260-psofgt",
+    "from": "团队协调员",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "测试工程师已完成 LoginView 和 HomeView 的验收方案，请查收并在开发完成后通知测试工程师执行验收。\n\n以下是测试工程师的核心要求摘要：\n\n---\n\n## LoginView 关键验收点\n- 邮箱/密码校验规则：emailRules `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/`，passwordRules 至少6位含字母和数字\n- 验证码模式：type='code' 时显示验证码输入框，60秒发送限制\n- 登录成功按角色跳转：student→/student/home, coach→/coach/students, admin→/admin/school\n- Token 存储：localStorage 存 token + refresh_token，每25分钟自动刷新\n- 401 自动登出跳转 /login\n\n## HomeView 关键验收点\n- 三栏网格布局：`grid-template-columns: 280px 1fr 260px`，@media 1400px 断点\n- 四大子组件：ProfileCard、TaskList、RadarChart、KnowledgeTreeMap\n- 冲刺卡片条件渲染：`v-if=\"studentStore.isSprintMode\"`，渐变背景 + 倒计时\n- 快捷入口：开始练习/模拟考试/AI问答/错题本，2x2网格\n- onMounted 并行加载 profile/dashboard/todayTasks\n- 缓存策略：dashboard 缓存 key=`dashboard-{userId}`，TTL=30s\n- ECharts 响应式 resize\n\n## SRS 5.1 对照\n- JWT认证 ✅ | RBAC角色控制 ✅ | 验证码机制 ✅ | 响应式设计 ✅\n- 缓存策略 useSWR ✅ | 错误处理统一规范 ✅\n\n详细验收清单、测试脚本（含单元测试和集成测试）请参见测试工程师的完整消息。开发完成后请及时通知测试工程师进行验收。",
+    "timestamp": "2026-06-01T12:03:18.260Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780315409638-zjiehj",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## ✅ 验收标准已出，请按此开发\n\n测试工程师已输出 LoginView 和 HomeView 的完整验收清单，你开发的页面必须通过以下检查：\n\n### LoginView 关键验收项\n- **UI**：表单字段（邮箱/手机/密码/验证码）、校验提示、CSS变量一致性\n- **交互**：登录成功→跳转首页、失败→错误提示、Token 存储 localStorage、验证码倒计时\n- **功能**：API调用 `/api/auth/login` 和 `/api/auth/send-code`、响应处理、角色区分存储\n\n### HomeView 关键验收项\n- **UI**：三栏布局、ProfileCard/RadarChart/KnowledgeTreeMap/TaskList/科目入口卡片/冲刺卡片\n- **交互**：加载骨架屏、数据失败降级UI、路由跳转、图表交互\n- **功能**：仪表盘数据获取、能力分数渲染、冲刺模式条件展示、RBAC校验\n\n### SRS 5.1 规范对照（13项）\nJWT认证、RBAC、密码bcrypt加密、验证码5分钟过期、仪表盘数据聚合、响应式1920×1080、缓存策略等均已覆盖。\n\n---\n\n请严格按照验收标准编写 LoginView.vue 和 HomeView.vue，用 Mock 数据确保独立可运行。完成后可以直接让测试工程师验证。\n",
+    "timestamp": "2026-06-01T12:03:29.638Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780315758860-7pl8pn",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 🔧 验收通过（条件性），立即修复 #1 和 #2\n\n测试工程师完成验收，整体评分优秀。但 **2项必须修复** 才能正式发布：\n\n### 🔴 #1 auth store 缺 refresh_token 自动刷新（高优）\n当前只存了 access_token，2小时后过期无法续期。请修改 `stores/auth.ts`：\n```typescript\n// 在 setAuth 中增加 refresh_token 存储\nstorage.set('refresh_token', data.refresh_token)\n// 在 setAuth 后启动定时器\nstartRefreshTimer() // 每25分钟自动调用 /api/auth/refresh\n```\n\n### 🟡 #2 LoginView 缺验证码登录模式（中优）\nSRS 要求支持 `type: 'password' | 'code'` 两种登录。请增加：\n- 登录类型切换按钮（密码登录 / 验证码登录）\n- 验证码模式下显示验证码输入框 + \"发送验证码\"按钮\n- 60秒发送间隔限制\n\n### 🟡 #4 HomeView 未使用 useSWR 缓存\ndashboard 数据每次 onMounted 都重新请求。请引入已实现的 `useSWR` composable 包裹 fetchDashboard。\n\n### 🟢 #3 密码可见切换（低优，可选）\n给密码框加一个 👁 图标切换 type。\n\n**优先修复 #1 和 #2，完成后回复\"已修复\"。**\n",
+    "timestamp": "2026-06-01T12:09:18.860Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780315998557-j50gd4",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 📋 Batch 2：P0 核心链路 4 页并行开发\n\n按学员核心流程，今天产出以下4个页面：\n\n### 1. EvaluationView — 能力基线测评页\n路由：`/student/evaluation`\n- 40题逐题展示（四维度各10题）\n- 每题45秒倒计时（使用 CountdownTimer）\n- 单选题选项交互，不可回退\n- 进度条显示（5/40）\n- 提交后展示：能力雷达图 + 薄弱点清单 + 能力等级 + 学习建议\n- Mock: `POST /api/student/evaluation/start` + `/submit`\n\n### 2. StudyPlanView — AI学习路径规划页\n路由：`/student/study-plan`\n- 日历化学习计划表（展示本周7天）\n- 每日任务清单（上午/下午/晚上各一组）\n- 进度概览（已完成/未完成/总任务数）\n- 知识点节点可点击 → 跳转练习\n- 支持手动标记完成/跳过\n- Mock: `GET /api/student/study-plan`\n\n### 3. PracticeView — 智能题库练习页\n路由：`/student/practice`\n- 顶部筛选栏：科目(科一/科四) + 题型(全/判断/单选/多选) + 难度(全/易/中/难) + 数量(10/20/50)\n- 答题区：QuestionCard 组件（题干+选项）\n- 每题答后即时显示：✅/❌ + 正确答案 + 解析 + 法规原文\n- 上一题/下一题/交卷按钮\n- 实时正确率 + 耗时统计\n- 错题自动归集到错题本\n- Mock: `POST /api/question/practice/start` + `/answer` + `/finish`\n\n### 4. ExamView — 全真模拟考试页\n路由：`/student/exam`，meta: { fullscreen: true }\n- 选择科目（科一100题 / 科四50题）\n- 全屏模式 + 45分钟倒计时\n- 题号导航面板（ExamNavigator：已答/未答/标记状态）\n- 剩余5分钟弹窗警告，到时间自动交卷\n- 防切窗监考（3次切窗自动交卷）\n- 交卷即时评分：分数 + 正确率 + 是否通过(≥90)\n- 错题详情 + 知识点正确率统计\n- Mock: `POST /api/question/exam/start` + `/answer` + `/submit`\n\n### 技术要求\n- 所有页面使用现有架构：`composables/useTimer.ts`、`useSWR.ts`、`stores/exam.ts`\n- 页面间流程串联：测评完成 → 跳转学习路径 → 知识点点击 → 练习页（预筛选）\n- 使用 MSW Mock，不依赖后端\n- 每页完成后可独立 `npm run dev` 查看效果\n\n### 进度反馈\n每完成一页回复\"XX页完成\"，全部完成后进行批量验收。\n",
+    "timestamp": "2026-06-01T12:13:18.557Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780316134248-k5aj2v",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 📋 Batch 2 验收清单已出，请严格按此标准开发\n\n测试工程师已完成4页验收标准（共78项），以下是关键要求摘要：\n\n### ExamStore（新建 `stores/exam.ts`）\n```\n必须实现: loadQuestions / answerQuestion / nextQuestion / prevQuestion /\n          jumpTo / submitExam / progress(getter) / wrongQuestions / reset\n```\n\n### EvaluationView（22项检查，含4边界）\n- 三阶段状态：loading → testing → result\n- CountdownTimer 45秒单题倒计时，超时自动下一题\n- **不可回退**，无边检题号导航\n- 结果页：等级徽章(冲刺绿/进阶蓝/基础黄/入门红) + 薄弱点列表\n\n### StudyPlanView（16项检查，含3边界）\n- 7天日历视图 + 每日任务卡片\n- 任务类型映射：practice→练习, ai_lesson→AI讲解, exam→模考, error→错题复习\n- 知识点点击 → `router.push('/student/practice?knowledgeId=xxx')`\n- 今天以前的任务锁定不可修改\n\n### PracticeView（21项检查，含4边界）\n- 四维筛选器：知识点/题型/难度/题数\n- 即时判题：选中即显 ✅/❌ + 解析 + 法规原文\n- **多选题 toggle 交互**\n- 错题自动归集\n\n### ExamView（29项检查，含6边界 🔴 最复杂）\n- 全屏 + 防切窗(warningCount ≤3) + **防作弊按键**\n- 左侧答题卡 5列网格（已答蓝/未答灰/标记黄/当前蓝底白字）\n- 45分钟倒计时 → 5分钟变红脉冲 → 归零自动交卷\n- 交卷前：未答提醒弹窗 → 二次确认 → 退出全屏 → 展示结果\n- 90分及格线\n\n### 关键边界条件（必须处理）\n| 页面 | 边界场景 |\n|------|---------|\n| ExamView | F12/F5/Ctrl+S/Ctrl+Shift+I/Ctrl+U 禁用 |\n| ExamView | 右键 contextmenu 禁用 |\n| ExamView | 浏览器不支持全屏时降级（不强制） |\n| ExamView | 刷新页面状态丢失，重新开始 |\n| EvaluationView | 刷新状态丢失，不恢复 |\n| StudyPlanView | 过去日期锁定，未来日期只读 |\n\n### 跨页流程串联\n```\nHomeView → \"开始测评\" → EvaluationView → \"查看学习计划\" → StudyPlanView\n    → 点击知识点任务 → PracticeView(预筛选knowledgeId)\n    → \"开始模拟考试\" → ExamView\n```\n\n**请按以上规范完整实现4个页面 + ExamStore，Page by Page 完成后通知验收。**\n",
+    "timestamp": "2026-06-01T12:15:34.248Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780316549033-jaq2rm",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 📋 Batch 3：学员端剩余10页全部开发\n\n按 P0/P1 优先 + P2 补充，今天全部交付：\n\n### 🔴 P0-P1 优先批次（6页先做）\n\n#### 1. AiQAView — AI交规问答（P0 核心特色！！！）\n路由：`/student/ai-qa`\n- 对话式布局：用户气泡(右) + AI气泡(左)\n- 底部输入框：文字输入 + 语音按钮(🎤)\n- **SSE流式响应**：使用已建的 `useSSE` composable（`streamChat` 异步生成器）\n- AI 回复结构化展示：知识点解析 + 法规原文引用 + 案例分析\n- 对话历史保留（本次会话），侧边栏可查看历史对话列表\n- 支持多轮追问，上下文保持\n- 中止回复按钮\n- 语音输入按 useVoice composable（Web Speech API 或占位）\n- Mock: `POST /api/ai/chat/stream` SSE\n\n#### 2. ErrorBookView — 智能错题本（P1）\n路由：`/student/error-book`\n- 顶部统计：总数/待复习/已复习/已掌握 四指标卡片\n- 错题列表：题干摘要 + 错误类型标签 + 错误次数 + 最后错误时间\n- 筛选：按科目(科一/科四) + 错因(概念不清/审题失误/混淆记忆) + 状态(待复习/已复习/已掌握)\n- \"重做错题\"按钮 → 进入练习模式（仅加载错题）\n- 连续答对3次 → 自动标记\"已掌握\"\n- 支持逐题移除/批量移除\n- Mock: `GET /api/question/error-book` + `DELETE /api/question/error-book/:id`\n\n#### 3. SprintView — 考前冲刺与押题（P1）\n路由：`/student/sprint`\n- 条件入口：仅距考试≤14天时显示（与 HomeView 冲刺卡片联动）\n- 倒计时天数醒目展示\n- 高频考点清单（Top 10，按错误率排序）\n- 3套高概率押题卷卡片入口\n- 每日冲刺任务清单\n- 点击押题卷 → 进入专注模式练习\n- Mock: `GET /api/question/sprint` + `POST /api/question/sprint/start`\n\n#### 4. ConfusingView — 易混淆知识点专项训练（P1）\n路由：`/student/confusing`\n- 类别选择：交警手势 / 扣分罚款 / 交通标志 / 综合\n- ContrastCard 组件：两张对比卡片左右排列，高亮差异点\n- AI 记忆口诀展示\n- 闯关模式：每关5组对比，全部正确晋级，错误高亮重试\n- 闯关进度：已通关数/总关卡数/正确率\n- Mock: `GET /api/question/confusing`\n\n#### 5. ProgressView — 学习进度可视化（P1）\n路由：`/student/progress`\n- 三个图表切换Tab：知识树/能力雷达图/学习热力图\n- 知识树：KnowledgeTreeMap 交互式节点（已完成绿/进行中蓝/未开始灰）\n- 能力雷达图：四维度当前值 + 与测评基线对比\n- 学习热力图：GitHub风格日历热力图（每日学习时长颜色深浅）\n- 学习统计卡片：总学习天数/总时长/总做题数/当前正确率\n- Mock: `GET /api/student/progress`\n\n#### 6. ReportView — 学习效果评估报告（P1）\n路由：`/student/report`\n- 能力成长曲线：折线图（各维度得分随时间变化）\n- 知识点掌握矩阵：热力矩阵表\n- 历次模拟考成绩趋势图\n- AI 改进建议\n- \"导出 PDF\"按钮（调用 API 下载，或浏览器打印）\n- Mock: `GET /api/student/report/pdf`\n\n### 🟢 P2 补充分批（4页后做）\n\n#### 7. SceneSimView — 交通场景模拟（P2）\n路由：`/student/scene-sim`\n- 场景类型选择：城市道路/高速公路/夜间/恶劣天气\n- AI 生成场景图片展示 + 加载占位\n- 基于场景的交互式判断题\n- 即时正误判断 + 解析\n- Mock: `POST /api/ai/generate-scene`\n\n#### 8. RewardsView — 学习激励系统（P2）\n路由：`/student/rewards`\n- 勋章墙（MedalWall）：铜牌(7天)/银牌(30天)/金牌(90天)/学霸(90%)\n- 连续学习天数展示\n- 排行榜：同驾校学员正确率排名\n- Mock: `GET /api/student/rewards`\n\n#### 9. TransportView — 运输从业人员培训（P2）\n路由：`/student/transport`\n- 从业类型选择：客运/货运/危化品\n- 课程列表 + 学习进度\n- 资格练习题库入口\n- Mock: `GET /api/student/transport`\n\n#### 10. MessagesView — 消息通知（P2）\n路由：`/student/messages`\n- 消息列表：类型图标 + 标题 + 时间 + 已读/未读\n- 点击查看详情\n- 全部标为已读\n- Mock: `GET /api/student/messages`\n\n---\n\n### 技术要求\n- 复用现有 `useSSE`(AiQA)、`useSWR`(ProgressView)、`QuestionCard`(ErrorBookView)\n- 新建 `ContrastCard.vue`（ConfusingView）、`MedalWall.vue`（RewardsView）\n- 每页独立 Mock，不依赖后端\n- 语音输入可用占位（显示 Toast\"语音功能开发中\"）\n\n### 进度\n每完成一页回复\"XX页完成\"，P0-P1优先。\n",
+    "timestamp": "2026-06-01T12:22:29.033Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780316701273-ji1iiz",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 📋 Batch 3 验收标准已出（113项），按此规范开发\n\n测试工程师已完成10页验收清单，以下是关键规范要求：\n\n### 需新增7条路由\n```\n/student/sprint /student/confusing /student/report\n/student/scene-sim /student/rewards /student/transport /student/messages\n```\n\n### 🔴 P0 三页关键要求\n\n**AiQAView（17项检查）**：对话气泡(用户右蓝/ AI左灰)+ SSE流式 + 结构化三段回复 + 闪烁光标 + 中止 + 语音降级 + onUnmounted清理\n\n**ErrorBookView（13项检查）**：错因三色标签(红/黄/蓝) + 四统计卡片 + 多维度筛选 + 连续3次正确掌握移除 + 重做模式\n\n**SprintView（12项检查）**：倒计时 + 高频考点TopN + 3套押题卷卡片 + <3天红色警告\n\n### 🟡 P1 三页\nProgressView(三Tab图表,useSWR 60s) / ReportView(成长曲线+矩阵+PDF导出) / ConfusingView(ContrastCard+口诀+闯关)\n\n### 🟢 P2 四页\nSceneSimView / RewardsView(MedalWall+Leaderboard) / TransportView / MessagesView\n\n### 新建组件\n`ContrastCard.vue` / `MedalWall.vue` / `Leaderboard.vue` / `HeatmapCalendar.vue` / `KnowledgeTreeMap.vue`\n\n按P0→P1→P2顺序分批交付。\n",
+    "timestamp": "2026-06-01T12:25:01.273Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780317176598-mfu8az",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 📋 Batch 4（收官）：教练端2页 + 管理端3页\n\n### 需新建\n路由：`coach.routes.ts` + `admin.routes.ts`，Layout：`CoachLayout.vue` + `AdminLayout.vue`\n\n### 教练端（2页）\n\n**CoachStudentsView（P1）**：四统计卡片 + DataTable(排序/搜索) + 学情详情面板(四维得分/薄弱Top5/趋势/模考记录) + 导出Excel + RBAC行级权限\n\n**CoachAiAdviceView（P2）**：学员下拉选择 + 知识短板分析 + AI建议(重点/方法/方案) + 5天辅导计划\n\n### 管理端（3页）\n\n**AdminSchoolView（P1）**：仪表盘 + 成绩分布柱状图 + 薄弱Top10 + 批量任务列表/新建弹窗 + 导出报告\n\n**AdminOperationView（P1）**：总用户/DAU/MAU/留存 + DAU趋势图 + 驾校分布表 + 科一/科四通过率。meta: { roles: ['admin', 'operator'] }\n\n**AdminCMSView（P1）**：三Tab(题库/审核中心/知识点)。审核状态机：草稿灰→待审核黄→已上线绿→驳回红。meta: { roles: ['admin', 'editor'] }\n\n### Mock覆盖\n8个新端点：coach/students, coach/ai-advice, admin/school/dashboard, admin/school/tasks, admin/operation/dashboard, admin/cms/questions, admin/cms/review, admin/cms/knowledge\n\nTable分页统一 20/页。5页全部完成后一并回复。\n",
+    "timestamp": "2026-06-01T12:32:56.598Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780317283881-tq2rbu",
+    "from": "team-lead",
+    "to": "前端开发工程师",
+    "type": "message",
+    "content": "## 📋 Batch 4（收官）验收标准 66项\n\n### 新建文件清单\n```\nrouter/routes/coach.routes.ts + admin.routes.ts\ncomponents/layout/CoachLayout.vue + AdminLayout.vue\nviews/coach/CoachStudentsView.vue + CoachAiAdviceView.vue\nviews/admin/AdminSchoolView.vue + AdminOperationView.vue + AdminCMSView.vue\n```\n\n### 关键规范\n\nCoachStudentsView：左学员列表(排序/搜索)+右详情面板(四维得分/薄弱Top5/4周趋势折线图)，正确率≥80绿/≥60黄/<60红，导出blob，RBAC行级权限。\n\nCoachAiAdviceView：query参数studentId，知识短板+进步趋势+双栏建议(知识/方法)+5天训练方案。\n\nAdminSchoolView：4KPI卡片(28px蓝)+5色柱状图(红→绿)+薄弱TOP10排序+批量任务弹窗+导出。\n\nAdminOperationView(roles:admin/operator)：DAU/MAU双线图+通过率环形饼图+驾校分布+账号CRUD。\n\nAdminCMSView(roles:admin/editor)：三Tab+审核状态机(编辑→初审→终审→发布)+批量导入multipart+版本回滚。\n\nMock 12个端点，5页全部完成后一并回复。\n",
+    "timestamp": "2026-06-01T12:34:43.881Z",
+    "read": true
+  }
+]

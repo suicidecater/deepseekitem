@@ -1,0 +1,83 @@
+[
+  {
+    "id": "msg-1780315401935-bwvfd1",
+    "from": "团队协调员",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "你的 LoginView 和 HomeView 验收方案已收到，并已转发给前端开发工程师。前端开发完成后会通知你执行验收。感谢准备如此详尽的测试方案！",
+    "timestamp": "2026-06-01T12:03:21.935Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780315662092-kew5qe",
+    "from": "team-lead",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "## 🔍 执行验收：LoginView + HomeView 已交付\n\n前端工程师已产出完整代码（35个文件），请立即执行验收：\n\n### 验收文件\n- `frontend/src/views/auth/LoginView.vue` (12 KB)\n- `frontend/src/views/student/HomeView.vue` (25 KB)\n- `frontend/src/components/layout/` AppHeader/AppSidebar/StudentLayout/AuthLayout\n- `frontend/src/stores/` auth/student/app\n- `frontend/src/router/` + guards + RBAC\n- `frontend/mocks/` MSW 4个Mock API\n\n### 请按你之前的验收清单逐项检查\n- LoginView UI 10项 + 交互 9项 + 功能 6项\n- HomeView UI 11项 + 交互 9项 + 功能 9项\n- SRS 5.1 13项规范对照\n\n### 启动方式\n```bash\ncd frontend && npm install && npm run dev\n```\n\n完成验收后给出通过/不通过结论及问题清单。\n",
+    "timestamp": "2026-06-01T12:07:42.092Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780315940759-jzy8py",
+    "from": "team-lead",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "## 复验：4项问题已全部修复\n\n前端工程师已完成所有修复，变更文件如下：\n\n| # | 修复项 | 变更文件 |\n|---|--------|---------|\n| #1 | refresh_token + 25分钟自动刷新 | `stores/auth.ts` 重写 |\n| #2 | 验证码登录模式 (password/code切换) | `LoginView.vue` 大幅修改 |\n| #3 | 密码显示/隐藏切换 👁 | `LoginView.vue` (附赠修复) |\n| #4 | useSWR 30秒缓存 | `HomeView.vue` + 新建 `composables/useSWR.ts` |\n| Mock | 新增 `/api/auth/refresh` | `mocks/handlers.ts` |\n\n请复查之前4项不通过项，特别是：\n- 验证码登录：切换到 code 模式 → 输入验证码 → 60秒倒计时 → 提交登录\n- Token刷新：等25分钟或手动触发 refresh → 验证新token生效\n- useSWR缓存：打开 HomeView → 30秒内再次访问 → 验证不发送新请求\n- 密码切换：点击 👁 图标 → 密码明文/密文切换\n\n给出最终验收结论。\n",
+    "timestamp": "2026-06-01T12:12:20.759Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780316007671-jdopl8",
+    "from": "team-lead",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "## Batch 2 验收准备：P0核心链路4页\n\n前端即将产出以下4页，请预准备验收标准：\n\n| 页面 | 核心功能 | 关键测试点 |\n|------|---------|-----------|\n| EvaluationView | 40题逐题测评 | 45秒倒计时、不可回退、四维度计分、雷达图生成 |\n| StudyPlanView | 7天日历计划 | 任务状态切换、知识点跳转练习、进度计算 |\n| PracticeView | 多维度筛选练习 | 筛选组合、即时判题、解析展示、错题归集 |\n| ExamView | 全屏模拟考试 | 全屏/防切窗、45分钟倒计时、自动交卷、90分及格线 |\n\n对照 SRS 第3.2-3.4节逐页验证，准备验收清单。不急于回复，前端完成后我会通知你执行。\n",
+    "timestamp": "2026-06-01T12:13:27.671Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780316363574-wp0f3j",
+    "from": "team-lead",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "## 🔍 执行 Batch 2 完整验收\n\n前端工程师已交付4页 + 5个底层组件（13个文件），请按你之前准备的78项清单逐项验收：\n\n重点验证：\n1. **ExamView** 29项 — 全屏/防切窗/F12F5禁用/右键屏蔽/3次自动交卷/90分及格线\n2. **EvaluationView** 22项 — 三阶段/45秒超时/不可回退/等级徽章\n3. **PracticeView** 21项 — 即时判题/多选toggle/错题归集\n4. **StudyPlanView** 16项 — 7天日历/useSWR缓存/过去锁定\n\n跨页流程：HomeView→测评→StudyPlan→PracticeView→ExamView\n\n启动方式：`cd frontend && npm run dev`，给出完整验收结论。\n",
+    "timestamp": "2026-06-01T12:19:23.574Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780316558135-vh7da1",
+    "from": "team-lead",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "## Batch 3 验收准备：学员端剩余10页\n\n前端即将产出以下页面，请预准备验收标准（按 P0-P1 优先）：\n\n### P0-P1（6页）\n- AiQAView — SSE流式AI问答（对话气泡+结构化回复+语音+中止）\n- ErrorBookView — 错题本（筛选+重做+连续3次掌握移除）\n- SprintView — 考前冲刺（高频考点+押题卷+倒计时）\n- ConfusingView — 易混淆训练（对比卡片+口诀+闯关模式）\n- ProgressView — 进度可视化（知识树/雷达图/热力图）\n- ReportView — 评估报告（成长曲线/矩阵/趋势/PDF导出）\n\n### P2（4页）\n- SceneSimView — 交通场景模拟\n- RewardsView — 激励系统（勋章墙+排行榜）\n- TransportView — 运输从业人员培训\n- MessagesView — 消息通知\n\n对照 SRS 第3.3-3.8节逐页验收。不急于回复，前端完成后我会通知。\n",
+    "timestamp": "2026-06-01T12:22:38.135Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780316999784-bpec7h",
+    "from": "team-lead",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "## 🔍 执行 Batch 3 完整113项验收\n\n前端工程师已交付学员端全部剩余10页 + 5个新业务组件：\n\n### 交付文件确认\n```\nsrc/views/student/ (15页全部就位)\n├── AiQAView.vue (6.9KB)     ├── SprintView.vue (6.7KB)\n├── ErrorBookView.vue (7.7KB)├── ConfusingView.vue (5.5KB)\n├── ProgressView.vue (6.3KB) ├── ReportView.vue (5.0KB)\n├── SceneSimView.vue (6.5KB) ├── RewardsView.vue (3.2KB)\n├── TransportView.vue (4.3KB)├── MessagesView.vue (4.0KB)\n\nsrc/components/business/ (新增5个)\nContrastCard/ MedalWall/ Leaderboard/ KnowledgeTreeMap/ HeatmapCalendar\n+ useSSE.ts composable\n```\n\n### 请按你准备的113项清单逐项验收\n\n重点验证：\n1. **AiQAView** SSE流式 + 结构化回复 + 中止 + 语音降级\n2. **ErrorBookView** 四统计卡片 + 三色标签 + 连续3次掌握\n3. **SprintView** 倒计时 + 高频考点 + 押题卷\n4. **ProgressView** 三Tab图表 + useSWR\n5. 新组件功能完整性\n\n启动：`cd frontend && npm run dev`\n\n给出完整验收结论。\n",
+    "timestamp": "2026-06-01T12:29:59.784Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780317185942-eb4uqc",
+    "from": "team-lead",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "## Batch 4 验收准备：教练端2页 + 管理端3页（收官）\n\n前端即将产出最后5页：\n\n### 教练端\n- CoachStudentsView — 学情数据表 + 详情面板 + 导出Excel + RBAC行级权限\n- CoachAiAdviceView — 学员选择 + AI分析 + 辅导计划\n\n### 管理端\n- AdminSchoolView — 仪表盘 + 成绩图表 + 批量任务 + 导出\n- AdminOperationView — 运营看板(DAU/留存/7日) + 驾校分布\n- AdminCMSView — 三Tab(题库/审核中心/知识点) + 审核状态机\n\n对照SRS 3.7-3.8节 + 后端admin/cms API文档。前端完成后我会通知验收。\n",
+    "timestamp": "2026-06-01T12:33:05.942Z",
+    "read": true
+  },
+  {
+    "id": "msg-1780317434692-yjd3qy",
+    "from": "team-lead",
+    "to": "测试工程师",
+    "type": "message",
+    "content": "## 🔍 最终验收：Batch 4 全部5页已交付\n\n文件已确认就位：\n```\nsrc/views/coach/    StudentsView.vue (6.5KB) + AiAdviceView.vue (5.0KB)\nsrc/views/admin/    SchoolView.vue (5.4KB) + OperationView.vue (4.8KB) + CMSView.vue (5.6KB)\nsrc/router/routes/  coach.routes.ts + admin.routes.ts\nsrc/components/     CoachLayout + AdminLayout + DataTable + SearchFilter\n```\n\n### 按你准备的66项清单逐项验收\n\n重点验证：\n1. **CoachStudentsView** — 搜索/排序/学情面板/正确率颜色/导出/RBAC行级权限\n2. **CoachAiAdviceView** — 学员下拉/三色建议卡片/5天计划\n3. **AdminSchoolView** — 4KPI/柱状图/薄弱TOP10排序/批量任务\n4. **AdminOperationView** — DAU趋势图/通过率条/驾校分布\n5. **AdminCMSView** — 三Tab/审核状态机(灰→黄→绿→红)\n\nAdminLayout 侧边栏按 adminType 过滤（editor仅CMS / operator仅运营 / superAdmin全部）\n\n启动：`cd frontend && npm run dev`，给出最终验收结论。\n",
+    "timestamp": "2026-06-01T12:37:14.692Z",
+    "read": true
+  }
+]

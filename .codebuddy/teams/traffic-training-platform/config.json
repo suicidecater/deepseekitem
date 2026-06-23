@@ -1,0 +1,43 @@
+{
+  "name": "traffic-training-platform",
+  "leadAgentId": "c397044916c64de7845e82c0b21a88b0",
+  "workspacePath": "c:/Users/26537/Desktop/item",
+  "createdAt": "2026-06-01T11:54:28.116Z",
+  "options": {
+    "workspacePath": "c:/Users/26537/Desktop/item",
+    "isAutoTeam": false
+  },
+  "members": [
+    {
+      "memberId": "team-lead@traffic-training-platform",
+      "name": "team-lead",
+      "role": "Team Lead - coordinates the team and interacts with the user"
+    },
+    {
+      "memberId": "前端开发工程师@traffic-training-platform",
+      "name": "前端开发工程师",
+      "role": "修复前端架构3项缺陷"
+    },
+    {
+      "memberId": "团队协调员@traffic-training-platform",
+      "name": "团队协调员",
+      "role": "召回团队启动前端开发"
+    },
+    {
+      "memberId": "后端开发工程师@traffic-training-platform",
+      "name": "后端开发工程师",
+      "role": "后端咨询支持"
+    },
+    {
+      "memberId": "测试工程师@traffic-training-platform",
+      "name": "测试工程师",
+      "role": "测试验收准备"
+    },
+    {
+      "memberId": "需求分析师@traffic-training-platform",
+      "name": "需求分析师",
+      "role": "竞品分析与需求对照"
+    }
+  ],
+  "isAutoTeam": false
+}
