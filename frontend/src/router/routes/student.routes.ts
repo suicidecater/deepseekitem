@@ -34,7 +34,7 @@ export const studentRoutes: RouteRecordRaw = {
       path: 'exam',
       name: 'StudentExam',
       component: () => import('@/views/student/ExamView.vue'),
-      meta: { title: '全真模拟考试', fullscreen: true }
+      meta: { title: '全真模拟考试' }
     },
     {
       path: 'ai-qa',
@@ -49,10 +49,10 @@ export const studentRoutes: RouteRecordRaw = {
       meta: { title: '错题本' }
     },
     {
-      path: 'confusing',
-      name: 'StudentConfusing',
-      component: () => import('@/views/student/ConfusingView.vue'),
-      meta: { title: '易混淆专项训练' }
+      path: 'special-training',
+      name: 'StudentSpecialTraining',
+      component: () => import('@/views/student/SpecialTrainingView.vue'),
+      meta: { title: '专项训练' }
     },
     {
       path: 'scene-sim',
@@ -61,22 +61,10 @@ export const studentRoutes: RouteRecordRaw = {
       meta: { title: '交通场景模拟' }
     },
     {
-      path: 'sprint',
-      name: 'StudentSprint',
-      component: () => import('@/views/student/SprintView.vue'),
-      meta: { title: '考前冲刺与押题' }
-    },
-    {
       path: 'progress',
       name: 'StudentProgress',
       component: () => import('@/views/student/ProgressView.vue'),
       meta: { title: '学习进度可视化' }
-    },
-    {
-      path: 'rewards',
-      name: 'StudentRewards',
-      component: () => import('@/views/student/RewardsView.vue'),
-      meta: { title: '学习激励' }
     },
     {
       path: 'report',

@@ -1,5 +1,5 @@
 """
-社交/互动模型：Message（消息通知）、UserMedal（用户勋章）、Note（笔记互动）、Feedback（用户反馈）
+社交/互动模型：Message（消息通知）、Note（笔记互动）、Feedback（用户反馈）
 系统日志：SysLog
 """
 from datetime import datetime
@@ -32,26 +32,6 @@ class Message(BaseModel):
             'channel': self.channel,
             'status': self.status,
             'create_time': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
-        }
-
-
-class UserMedal(BaseModel):
-    """用户勋章表"""
-    __tablename__ = 'user_medal'
-
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True, comment='勋章ID')
-    student_id = db.Column(db.BigInteger, db.ForeignKey('student.id'), nullable=False, index=True, comment='学员ID')
-    medal_name = db.Column(db.String(32), nullable=False, comment='勋章名称')
-    medal_rule = db.Column(db.String(255), nullable=True, comment='勋章规则描述')
-    get_time = db.Column(db.DateTime, default=datetime.now, comment='获得时间')
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'student_id': self.student_id,
-            'medal_name': self.medal_name,
-            'medal_rule': self.medal_rule,
-            'get_time': self.get_time.strftime('%Y-%m-%d %H:%M:%S') if self.get_time else None,
         }
 
 
@@ -91,7 +71,7 @@ class Feedback(BaseModel):
     user_id = db.Column(db.BigInteger, nullable=False, index=True, comment='用户ID')
     type = db.Column(db.SmallInteger, default=3, comment='反馈类型: 1故障/2学习/3建议/4投诉')
     content = db.Column(db.Text, nullable=True, comment='反馈内容')
-    handler_id = db.Column(db.BigInteger, db.ForeignKey('platform_admin.id'), nullable=True, comment='处理人ID')
+    handler_id = db.Column(db.BigInteger, db.ForeignKey('admin.id'), nullable=True, comment='处理人ID')
     reply = db.Column(db.Text, nullable=True, comment='回复内容')
     status = db.Column(db.SmallInteger, default=1, comment='状态: 1待处理/2处理中/3已办结')
     create_time = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
@@ -119,24 +99,24 @@ class SysLog(BaseModel):
     __tablename__ = 'sys_log'
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True, comment='日志ID')
-    user_type = db.Column(db.SmallInteger, nullable=False, comment='用户类型: 1学员/2教练/3管理员')
+    user_type = db.Column(db.SmallInteger, nullable=False, comment='用户类型: 1学员 2教练 3管理员')
     user_id = db.Column(db.BigInteger, nullable=False, index=True, comment='用户ID')
-    log_type = db.Column(db.SmallInteger, default=2, comment='日志类型: 1登录/2操作')
+    log_type = db.Column(db.SmallInteger, nullable=False, comment='日志类型: 1登录 2操作')
     module = db.Column(db.String(64), nullable=True, comment='操作模块')
-    content = db.Column(db.String(255), nullable=True, comment='日志内容')
-    ip = db.Column(db.String(32), nullable=True, comment='IP地址')
+    content = db.Column(db.String(255), nullable=False, comment='日志内容')
+    ip = db.Column(db.String(32), nullable=True, comment='登录IP')
     device = db.Column(db.String(64), nullable=True, comment='设备信息')
     oper_time = db.Column(db.DateTime, default=datetime.now, comment='操作时间')
 
     def to_dict(self):
         return {
             'id': self.id,
-            'user_type': self.user_type,
-            'user_id': self.user_id,
-            'log_type': self.log_type,
+            'userType': self.user_type,
+            'userId': self.user_id,
+            'logType': self.log_type,
             'module': self.module,
             'content': self.content,
             'ip': self.ip,
             'device': self.device,
-            'oper_time': self.oper_time.strftime('%Y-%m-%d %H:%M:%S') if self.oper_time else None,
+            'operTime': self.oper_time.strftime('%Y-%m-%d %H:%M:%S') if self.oper_time else None,
         }

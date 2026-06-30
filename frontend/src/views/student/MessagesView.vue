@@ -13,8 +13,7 @@ interface Message {
 
 const messages = ref<Message[]>([
   { id: 1, type: 'exam', title: '模拟考试提醒', content: '你已经有3天没有进行模拟考试了，保持练习才能更好通过考试！', time: '2026-06-01 10:30', read: false },
-  { id: 2, type: 'reward', title: '勋章获得！', content: '恭喜你获得"初出茅庐"勋章，已连续学习7天！', time: '2026-05-28 08:00', read: false },
-  { id: 3, type: 'study', title: '学习报告生成', content: '你的5月学习报告已生成，正确率85%，查看详情了解你的进步。', time: '2026-05-31 00:01', read: true },
+  { id: 2, type: 'study', title: '学习报告生成', content: '你的5月学习报告已生成，正确率85%，查看详情了解你的进步。', time: '2026-05-31 00:01', read: true },
   { id: 4, type: 'system', title: '系统通知', content: '平台已更新题库，新增200道交通法规题目，快来练习吧！', time: '2026-05-25 14:00', read: true },
   { id: 5, type: 'exam', title: '考试倒计时', content: '距离你的驾考还有10天，建议开启考前冲刺模式！', time: '2026-05-30 09:00', read: false },
 ])

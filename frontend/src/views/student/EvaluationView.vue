@@ -1,18 +1,29 @@
 <script setup lang="ts">
 // src/views/student/EvaluationView.vue - 能力基线测评页
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useExamStore } from '@/stores/exam'
+import { useAuthStore } from '@/stores/auth'
 import { useTimer } from '@/composables/useTimer'
 import QuestionCard from '@/components/business/QuestionCard.vue'
+import RadarChart from '@/components/charts/RadarChart.vue'
 
 const router = useRouter()
+const route = useRoute()
 const examStore = useExamStore()
+const authStore = useAuthStore()
 
-type Phase = 'loading' | 'testing' | 'result'
-const phase = ref<Phase>('loading')
+type Phase = 'intro' | 'loading' | 'testing' | 'result'
+const phase = ref<Phase>('intro')
 const evaluationResult = ref<any>(null)
 const selectedAnswer = ref('')
+
+// 是否强制测评模式
+const isRequired = computed(() => route.query.required === '1')
+
+// 方向名称
+const directionNames: Record<number, string> = { 1: '科目一', 4: '科目四', 5: '专业人员' }
+const directionName = computed(() => directionNames[authStore.studySubject] || '科目一')
 
 // 倒计时（每题45秒）
 const timer = useTimer(45, handleTimeout)
@@ -21,22 +32,55 @@ const timer = useTimer(45, handleTimeout)
 const abilityLevel = computed(() => {
   if (!evaluationResult.value) return null
   const avg = evaluationResult.value.correctRate
-  if (avg >= 90) return { level: '冲刺', color: '#52C41A', desc: '基础扎实，可以直接冲刺考试！' }
-  if (avg >= 75) return { level: '进阶', color: '#1677FF', desc: '有一定基础，重点突破薄弱环节' }
-  if (avg >= 60) return { level: '基础', color: '#FAAD14', desc: '需要系统学习交通法规知识' }
+  if (avg >= 95) return { level: '冲刺', color: '#52C41A', desc: '基础扎实，可以直接冲刺考试！' }
+  if (avg >= 85) return { level: '进阶', color: '#1677FF', desc: '有一定基础，重点突破薄弱环节' }
+  if (avg >= 70) return { level: '基础', color: '#FAAD14', desc: '需要系统学习交通法规知识' }
   return { level: '入门', color: '#FF4D4F', desc: '建议从头系统学习，打好基础' }
 })
 
-onMounted(async () => {
-  await examStore.loadQuestions({
-    mode: 'evaluation',
-    subject: 1,
-    count: 40,
-    difficulty: 0
-  })
-  phase.value = 'testing'
-  timer.start()
+// 难度拆分数据
+const difficultyData = computed(() => evaluationResult.value?.difficultyBreakdown || {})
+
+// 雷达图数据
+const radarChartData = computed(() => {
+  const rd = evaluationResult.value?.radarData
+  if (!rd) return []
+  return [
+    {
+      label: '当前能力',
+      data: rd.current || [],
+      color: '#1677FF',
+    },
+    {
+      label: '基准线',
+      data: rd.baseline || [],
+      color: '#999',
+      fill: false,
+      dashed: true,
+    },
+  ]
 })
+
+onMounted(() => {
+  // 等待用户点击"开始测评"
+})
+
+async function startEvaluation() {
+  phase.value = 'loading'
+  try {
+    await examStore.loadQuestions({
+      mode: 'evaluation',
+      subject: 1,
+      count: 0,
+      difficulty: 0
+    })
+    phase.value = 'testing'
+    timer.start()
+  } catch {
+    phase.value = 'intro'
+    alert('题目加载失败，请重试')
+  }
+}
 
 function handleAnswer(questionId: number, answer: string) {
   selectedAnswer.value = answer
@@ -79,16 +123,63 @@ async function handleSubmit() {
   })
   const result = await examStore.submit(records)
   evaluationResult.value = result
+  // 测评完成，更新当前方向的测评状态
+  if (authStore.userInfo) {
+    const dir = String(authStore.studySubject)
+    if (!authStore.userInfo.evaluationStatusMap) {
+      authStore.userInfo.evaluationStatusMap = {}
+    }
+    authStore.userInfo.evaluationStatusMap[dir] = 1
+    authStore.userInfo.evaluationStatus = 1
+  }
   phase.value = 'result'
 }
 
 function goToStudyPlan() {
-  router.push('/student/study-plan')
+  router.push('/student/study-plan?direction=' + authStore.studySubject)
+}
+
+function goToReport() {
+  router.push('/student/report')
+}
+
+function goHome() {
+  router.push('/student/home')
 }
 </script>
 
 <template>
   <div class="evaluation-page">
+    <!-- 介绍页 -->
+    <div v-if="phase === 'intro'" class="eval-intro">
+      <h2>{{ directionName }} · 能力基线测评</h2>
+      <div class="intro-cards">
+        <div class="intro-card">
+          <span class="intro-icon">📐</span>
+          <strong>四维度评估</strong>
+          <p>交通标志 / 交通法规 / 安全常识 / 驾驶理论</p>
+        </div>
+        <div class="intro-card">
+          <span class="intro-icon">⭐</span>
+          <strong>两难度分层</strong>
+          <p>简单题 + 中等题，精准定位薄弱环节</p>
+        </div>
+        <div class="intro-card">
+          <span class="intro-icon">📝</span>
+          <strong>共80道精选题目</strong>
+          <p>每题45秒，选择后自动跳转，不可回退</p>
+        </div>
+      </div>
+      <div class="intro-tips">
+        <p>💡 测评完成后，系统将根据你的薄弱点生成 <strong>AI个性化学习路径</strong></p>
+        <p>💡 测评结果将展示四级 <strong>能力雷达图</strong>，明确优势与短板</p>
+        <p v-if="authStore.evaluationStatus" class="intro-tips-warn">⚠️ 该方向已有测评记录，重新测评将覆盖之前的数据</p>
+      </div>
+      <button class="btn btn-primary btn-lg" @click="startEvaluation">
+        开始测评 →
+      </button>
+    </div>
+
     <!-- 加载中 -->
     <div v-if="phase === 'loading'" class="loading-state">
       <div class="spinner"></div>
@@ -98,13 +189,13 @@ function goToStudyPlan() {
     <!-- 测评阶段 -->
     <template v-if="phase === 'testing' && examStore.currentQuestion">
       <div class="eval-header">
-        <h2>能力基线测评</h2>
-        <p class="eval-desc">共40题，四维度评估你的交规知识水平</p>
+        <h2>{{ directionName }} · 能力基线测评</h2>
+        <p class="eval-desc">共{{ examStore.totalCount }}题，四维度（交通标志/交通法规/安全常识/驾驶理论）× 两难度评估</p>
         <div class="eval-progress-bar">
           <div class="progress-track">
             <div
               class="progress-fill"
-              :style="{ width: ((examStore.currentIndex) / examStore.totalCount) * 100 + '%' }"
+              :style="{ width: ((examStore.currentIndex) / Math.max(examStore.totalCount, 1)) * 100 + '%' }"
             ></div>
           </div>
           <span class="progress-text">{{ examStore.currentIndex + 1 }} / {{ examStore.totalCount }}</span>
@@ -141,20 +232,45 @@ function goToStudyPlan() {
           <p class="level-desc">{{ abilityLevel?.desc }}</p>
         </div>
 
-        <!-- 能力雷达图（CSS简化版） -->
+        <!-- 能力雷达图（Chart.js） -->
         <div class="result-radar card">
           <h3>四维能力分析</h3>
-          <div class="simple-radar">
-            <div v-for="(dim, idx) in evaluationResult.radarData?.dimensions || []" :key="dim" class="radar-dim">
-              <span class="dim-label">{{ dim }}</span>
-              <div class="dim-bar-bg">
-                <div
-                  class="dim-bar-fill"
-                  :style="{ width: (evaluationResult.radarData?.current?.[idx] || 0) + '%' }"
-                  :class="{ low: (evaluationResult.radarData?.current?.[idx] || 0) < 60 }"
-                ></div>
+          <RadarChart
+            :dimensions="evaluationResult.radarData?.dimensions || []"
+            :datasets="radarChartData"
+            height="340"
+          />
+        </div>
+
+        <!-- 难度分解柱状图 -->
+        <div v-if="Object.keys(difficultyData).length" class="result-difficulty card">
+          <h3>难度维度分解</h3>
+          <div class="diff-grid">
+            <div v-for="(info, dimName) in difficultyData" :key="dimName" class="diff-dim">
+              <span class="diff-dim-name">{{ dimName }}</span>
+              <div class="diff-bars">
+                <div class="diff-row">
+                  <span class="diff-label">⭐ 简单</span>
+                  <div class="diff-bar-bg">
+                    <div
+                      class="diff-bar-fill easy"
+                      :style="{ width: (info.diff1Rate || 0) + '%' }"
+                    ></div>
+                  </div>
+                  <span class="diff-value">{{ info.diff1Correct || 0 }}/{{ info.diff1Total || 0 }} ({{ info.diff1Rate || 0 }}%)</span>
+                </div>
+                <div class="diff-row">
+                  <span class="diff-label">⭐⭐ 中等</span>
+                  <div class="diff-bar-bg">
+                    <div
+                      class="diff-bar-fill hard"
+                      :style="{ width: (info.diff2Rate || 0) + '%' }"
+                      :class="{ bad: (info.diff2Rate || 0) < 60 }"
+                    ></div>
+                  </div>
+                  <span class="diff-value">{{ info.diff2Correct || 0 }}/{{ info.diff2Total || 0 }} ({{ info.diff2Rate || 0 }}%)</span>
+                </div>
               </div>
-              <span class="dim-score">{{ evaluationResult.radarData?.current?.[idx] || 0 }}分</span>
             </div>
           </div>
         </div>
@@ -184,10 +300,10 @@ function goToStudyPlan() {
         </div>
 
         <div class="result-actions">
-          <button class="btn btn-primary btn-lg" @click="goToStudyPlan">
-            查看AI学习计划 →
+          <button class="btn btn-primary btn-lg" @click="goToReport">
+            查看完整报告 →
           </button>
-          <button class="btn btn-outline btn-lg" @click="router.push('/student/home')">
+          <button v-if="!isRequired" class="btn btn-outline btn-lg" @click="goHome">
             返回首页
           </button>
         </div>
@@ -201,6 +317,68 @@ function goToStudyPlan() {
   max-width: 800px;
   margin: 0 auto;
   padding: 24px;
+}
+
+/* ========== 介绍页 ========== */
+.eval-intro {
+  text-align: center;
+  padding: 48px 24px;
+}
+.eval-intro h2 {
+  font-size: var(--font-size-2xl);
+  margin-bottom: 32px;
+}
+.intro-cards {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+.intro-card {
+  flex: 1;
+  min-width: 160px;
+  max-width: 200px;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 20px 16px;
+  border: 1px solid var(--color-border-light);
+  text-align: center;
+}
+.intro-icon {
+  display: block;
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+.intro-card strong {
+  display: block;
+  font-size: var(--font-size-base);
+  margin-bottom: 4px;
+}
+.intro-card p {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+.intro-tips {
+  background: #F6F8FA;
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  margin-bottom: 32px;
+  display: inline-block;
+  text-align: left;
+}
+.intro-tips p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 8px 0;
+}
+.intro-tips-warn {
+  color: var(--color-warning) !important;
+}
+.btn-lg {
+  padding: 14px 48px;
+  font-size: var(--font-size-lg);
 }
 
 .loading-state {
@@ -243,14 +421,6 @@ function goToStudyPlan() {
 .card { background: #fff; border-radius: var(--radius-lg); padding: 20px; border: 1px solid var(--color-border-light); }
 .card h3 { font-size: var(--font-size-lg); margin-bottom: 16px; }
 
-.simple-radar { display: flex; flex-direction: column; gap: 14px; }
-.radar-dim { display: flex; align-items: center; gap: 12px; }
-.dim-label { width: 72px; font-size: var(--font-size-sm); text-align: right; }
-.dim-bar-bg { flex: 1; height: 10px; background: #F0F0F0; border-radius: 5px; overflow: hidden; }
-.dim-bar-fill { height: 100%; background: var(--color-primary); border-radius: 5px; transition: width 0.8s; }
-.dim-bar-fill.low { background: var(--color-warning); }
-.dim-score { width: 40px; font-size: var(--font-size-sm); font-weight: 600; }
-
 .weak-list { display: flex; flex-direction: column; gap: 10px; }
 .weak-item { display: flex; align-items: center; gap: 12px; }
 .weak-name { width: 72px; font-size: var(--font-size-sm); }
@@ -262,4 +432,19 @@ function goToStudyPlan() {
 .result-advice li { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: 6px; }
 
 .result-actions { display: flex; gap: 12px; justify-content: center; margin-top: 12px; }
+
+/* 难度分解柱状图 */
+.result-difficulty h3 { margin-bottom: 14px; }
+.diff-grid { display: flex; flex-direction: column; gap: 16px; }
+.diff-dim { display: flex; align-items: flex-start; gap: 12px; }
+.diff-dim-name { width: 72px; font-size: var(--font-size-sm); font-weight: 600; text-align: right; flex-shrink: 0; padding-top: 2px; }
+.diff-bars { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.diff-row { display: flex; align-items: center; gap: 10px; }
+.diff-label { width: 52px; font-size: 12px; color: var(--color-text-tertiary); flex-shrink: 0; text-align: right; }
+.diff-bar-bg { flex: 1; height: 8px; background: #F0F0F0; border-radius: 4px; overflow: hidden; }
+.diff-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s; }
+.diff-bar-fill.easy { background: #52C41A; }
+.diff-bar-fill.hard { background: #1677FF; }
+.diff-bar-fill.bad { background: #FF4D4F; }
+.diff-value { width: 120px; font-size: 11px; color: var(--color-text-secondary); flex-shrink: 0; }
 </style>

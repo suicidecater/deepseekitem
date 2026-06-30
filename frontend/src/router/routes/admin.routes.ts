@@ -7,26 +7,30 @@ export const adminRoutes: RouteRecordRaw = {
   meta: { role: 'admin' },
   children: [
     {
-      path: 'school',
-      name: 'AdminSchool',
-      component: () => import('@/views/admin/SchoolView.vue'),
-      meta: { title: '驾校管理后台', roles: ['admin'] }
+      path: 'users',
+      name: 'AdminUsers',
+      component: () => import('@/views/admin/AdminUsers.vue'),
+      meta: { title: '人员管理', roles: ['admin'] }
     },
     {
-      path: 'operation',
-      name: 'AdminOperation',
-      component: () => import('@/views/admin/OperationView.vue'),
-      meta: { title: '运营管理平台', roles: ['admin', 'operator'] }
+      path: 'questions',
+      name: 'AdminQuestions',
+      component: () => import('@/views/admin/AdminQuestions.vue'),
+      meta: { title: '题库管理', roles: ['admin', 'editor'] }
+    },
+    {
+      path: 'api-config',
+      name: 'AdminApiConfig',
+      component: () => import('@/views/admin/AdminApiConfig.vue'),
+      meta: { title: 'API 配置', roles: ['admin'] }
     },
     {
       path: 'cms',
-      name: 'AdminCMS',
-      component: () => import('@/views/admin/CMSView.vue'),
-      meta: { title: '内容管理系统', roles: ['admin', 'editor'] }
+      redirect: '/admin/questions'
     },
     {
       path: '',
-      redirect: '/admin/school'
+      redirect: '/admin/users'
     }
   ]
 }

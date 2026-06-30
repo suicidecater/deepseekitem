@@ -1,49 +1,63 @@
 <script setup lang="ts">
 // src/components/layout/AppSidebar.vue
 import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/auth'
 import { computed } from 'vue'
 
 const appStore = useAppStore()
+const authStore = useAuthStore()
 
 interface MenuItem {
   label: string
   icon: string
   route: string
   badge?: number
+  locked?: boolean
 }
 
-const menuItems = computed<MenuItem[]>(() => [
-  { label: '学习首页', icon: '🏠', route: '/student/home' },
-  { label: '能力测评', icon: '📊', route: '/student/evaluation' },
-  { label: 'AI学习路径', icon: '🧭', route: '/student/study-plan' },
-  { label: 'AI交规问答', icon: '🤖', route: '/student/ai-qa' },
-  { label: '智能题库', icon: '📝', route: '/student/practice' },
-  { label: '模拟考试', icon: '📋', route: '/student/exam' },
-  { label: '错题本', icon: '📕', route: '/student/error-book', badge: 5 },
-  { label: '易混淆训练', icon: '🔄', route: '/student/confusing' },
-  { label: '场景模拟', icon: '🎮', route: '/student/scene-sim' },
-  { label: '考前冲刺', icon: '🚀', route: '/student/sprint' },
-  { label: '学习进度', icon: '📈', route: '/student/progress' },
-  { label: '勋章奖励', icon: '🏅', route: '/student/rewards' },
-  { label: '学习报告', icon: '📄', route: '/student/report' },
-  { label: '消息通知', icon: '🔔', route: '/student/messages', badge: 3 },
-])
+const menuItems = computed<MenuItem[]>(() => {
+  const needsEval = authStore.needsEvaluation
+  const items: MenuItem[] = [
+    { label: '学习首页', icon: '🏠', route: '/student/home', locked: needsEval },
+    { label: '能力测评', icon: '📊', route: '/student/evaluation' },
+    { label: '学习报告', icon: '📄', route: '/student/report', locked: needsEval },
+    { label: 'AI学习路径', icon: '🧭', route: '/student/study-plan', locked: needsEval },
+    { label: 'AI交规问答', icon: '🤖', route: '/student/ai-qa', locked: needsEval },
+    { label: '智能题库', icon: '📝', route: '/student/practice', locked: needsEval },
+    { label: '模拟考试', icon: '📋', route: '/student/exam', locked: needsEval },
+    { label: '错题本', icon: '📕', route: '/student/error-book', locked: needsEval },
+    { label: '专项训练', icon: '🎯', route: '/student/special-training', locked: needsEval },
+    { label: '场景模拟', icon: '🎮', route: '/student/scene-sim', locked: needsEval },
+    { label: '学习进度', icon: '📈', route: '/student/progress', locked: needsEval },
+    { label: '消息通知', icon: '🔔', route: '/student/messages', badge: 3, locked: needsEval },
+  ]
+  return items
+})
 </script>
 
 <template>
   <aside class="app-sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
     <nav class="sidebar-menu">
-      <router-link
-        v-for="item in menuItems"
-        :key="item.route"
-        :to="item.route"
-        class="menu-item"
-        :class="{ active: $route.path === item.route }"
-      >
-        <span class="menu-icon">{{ item.icon }}</span>
-        <span v-if="!appStore.sidebarCollapsed" class="menu-label">{{ item.label }}</span>
-        <span v-if="item.badge && !appStore.sidebarCollapsed" class="menu-badge">{{ item.badge }}</span>
-      </router-link>
+      <template v-for="item in menuItems" :key="item.route">
+        <router-link
+          v-if="!item.locked"
+          :to="item.route"
+          class="menu-item"
+          :class="{ active: $route.path === item.route }"
+        >
+          <span class="menu-icon">{{ item.icon }}</span>
+          <span v-if="!appStore.sidebarCollapsed" class="menu-label">{{ item.label }}</span>
+          <span v-if="item.badge && !appStore.sidebarCollapsed" class="menu-badge">{{ item.badge }}</span>
+        </router-link>
+        <span
+          v-else
+          class="menu-item locked"
+        >
+          <span class="menu-icon">{{ item.icon }}</span>
+          <span v-if="!appStore.sidebarCollapsed" class="menu-label">{{ item.label }}</span>
+          <span v-if="!appStore.sidebarCollapsed" class="lock-icon">🔒</span>
+        </span>
+      </template>
     </nav>
   </aside>
 </template>
@@ -115,5 +129,20 @@ const menuItems = computed<MenuItem[]>(() => [
   border-radius: 10px;
   min-width: 18px;
   text-align: center;
+}
+
+.menu-item.locked {
+  cursor: not-allowed;
+  opacity: 0.45;
+  color: var(--color-text-tertiary);
+  background: transparent;
+}
+.menu-item.locked:hover {
+  background: transparent;
+  color: var(--color-text-tertiary);
+}
+.lock-icon {
+  font-size: 11px;
+  margin-left: auto;
 }
 </style>

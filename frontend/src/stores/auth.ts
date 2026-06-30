@@ -12,45 +12,18 @@ export const useAuthStore = defineStore('auth', () => {
   const userInfo = ref<UserProfile | null>(storage.get('user'))
   const role = ref<string>(userInfo.value?.role || '')
 
+  const studySubject = computed(() => userInfo.value?.studySubject ?? 1)
+  const evaluationStatusMap = computed(() => userInfo.value?.evaluationStatusMap ?? {})
+  const evaluationStatus = computed(() => {
+    const key = String(studySubject.value)
+    return evaluationStatusMap.value[key] ?? 0
+  })
+  const needsEvaluation = computed(() => role.value === 'student' && evaluationStatus.value === 0)
   const isAuthenticated = computed(() => !!token.value)
 
   let refreshTimer: ReturnType<typeof setInterval> | null = null
 
-  function startRefreshTimer() {
-    stopRefreshTimer()
-    if (!refreshToken.value) return
-    refreshTimer = setInterval(async () => {
-      try {
-        const res = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken.value })
-        })
-        const json = await res.json()
-        if (json.code === 0) {
-          token.value = json.data.token
-          refreshToken.value = json.data.refresh_token || refreshToken.value
-          storage.set('token', token.value)
-          storage.set('refresh_token', refreshToken.value)
-        } else {
-          // refresh 失败 → 登出
-          logout()
-          window.location.href = '/login'
-        }
-      } catch {
-        logout()
-        window.location.href = '/login'
-      }
-    }, REFRESH_INTERVAL)
-  }
-
-  function stopRefreshTimer() {
-    if (refreshTimer) {
-      clearInterval(refreshTimer)
-      refreshTimer = null
-    }
-  }
-
+  // ======================== 设置认证信息 ========================
   interface AuthData {
     token: string
     refresh_token?: string
@@ -68,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     startRefreshTimer()
   }
 
-  function logout() {
+  function clearAuth() {
     token.value = ''
     refreshToken.value = ''
     userInfo.value = null
@@ -79,5 +52,91 @@ export const useAuthStore = defineStore('auth', () => {
     stopRefreshTimer()
   }
 
-  return { token, refreshToken, userInfo, role, isAuthenticated, setAuth, logout, startRefreshTimer, stopRefreshTimer }
+  // 兼容旧代码的 logout 别名
+  const logout = clearAuth
+
+  // ======================== Token 刷新 ========================
+  async function refreshTokenAction(): Promise<boolean> {
+    if (!refreshToken.value) return false
+    try {
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken.value}`
+        }
+      })
+      const json = await res.json()
+      if (json.code === 0 && json.data) {
+        token.value = json.data.access_token || json.data.token
+        refreshToken.value = json.data.refresh_token || refreshToken.value
+        storage.set('token', token.value)
+        storage.set('refresh_token', refreshToken.value)
+        return true
+      }
+      return false
+    } catch {
+      return false
+    }
+  }
+
+  function startRefreshTimer() {
+    stopRefreshTimer()
+    if (!refreshToken.value) return
+    refreshTimer = setInterval(async () => {
+      try {
+        const res = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${refreshToken.value}`
+          }
+        })
+        const json = await res.json()
+        if (json.code === 0 && json.data) {
+          token.value = json.data.access_token || json.data.token
+          refreshToken.value = json.data.refresh_token || refreshToken.value
+          storage.set('token', token.value)
+          storage.set('refresh_token', refreshToken.value)
+        } else {
+          clearAuth()
+          window.location.href = '/login'
+        }
+      } catch {
+        clearAuth()
+        window.location.href = '/login'
+      }
+    }, REFRESH_INTERVAL)
+  }
+
+  function stopRefreshTimer() {
+    if (refreshTimer) {
+      clearInterval(refreshTimer)
+      refreshTimer = null
+    }
+  }
+
+  // ======================== 退出登录 ========================
+  async function logoutAction(): Promise<void> {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.value}`
+        }
+      })
+    } catch {
+      // 忽略网络错误
+    }
+    clearAuth()
+  }
+
+  return {
+    token, refreshToken, userInfo, role, studySubject,
+    evaluationStatus, evaluationStatusMap, needsEvaluation, isAuthenticated,
+    setAuth, clearAuth, logout,
+    refreshTokenAction, logoutAction,
+    startRefreshTimer, stopRefreshTimer
+  }
 })

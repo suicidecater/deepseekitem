@@ -2,9 +2,11 @@
 Flask 应用工厂
 """
 import os
+import logging
+import importlib
 from flask import Flask
 from .config import config_map
-from .extensions import init_extensions
+from .extensions import init_extensions, redis_store, jwt
 
 
 def create_app(config_name=None):
@@ -18,22 +20,38 @@ def create_app(config_name=None):
     # 初始化扩展（SQLAlchemy, Redis, JWT, Celery, Limiter）
     init_extensions(app)
 
-    # 注册 API 蓝图
-    from .api.auth import auth_bp
-    from .api.student import student_bp
-    from .api.question import question_bp
-    from .api.ai import ai_bp
-    from .api.coach import coach_bp
-    from .api.admin import admin_bp
-    from .api.cms import cms_bp
+    # JWT黑名单检查回调（用于logout）
+    @jwt.token_in_blocklist_loader
+    def check_if_token_in_blocklist(jwt_header, jwt_payload):
+        jti = jwt_payload.get('jti')
+        if jti is None:
+            return False
+        if redis_store is None:
+            return False
+        return redis_store.exists(f'jwt_blacklist:{jti}')
 
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(student_bp, url_prefix='/api/student')
-    app.register_blueprint(question_bp, url_prefix='/api/question')
-    app.register_blueprint(ai_bp, url_prefix='/api/ai')
-    app.register_blueprint(coach_bp, url_prefix='/api/coach')
-    app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    app.register_blueprint(cms_bp, url_prefix='/api/cms')
+    # 注册 API 蓝图（只有已实现的蓝图才会注册）
+    blueprint_registry = {
+        ('api.auth', 'auth_bp'): '/api/auth',
+        ('api.student', 'student_bp'): '/api/student',
+        ('api.question', 'question_bp'): '/api/question',
+        ('api.ai', 'ai_bp'): '/api/ai',
+        ('api.coach', 'coach_bp'): '/api/coach',
+        ('api.admin', 'admin_bp'): '/api/admin',
+        ('api.cms', 'cms_bp'): '/api/cms',
+    }
+
+    for (module_path, bp_name), url_prefix in blueprint_registry.items():
+        try:
+            mod = importlib.import_module(f'.{module_path}', package='app')
+            bp = getattr(mod, bp_name, None)
+            if bp is not None:
+                app.register_blueprint(bp, url_prefix=url_prefix)
+                logging.getLogger(__name__).info(f'Blueprint registered: {url_prefix}')
+        except (ImportError, ModuleNotFoundError) as e:
+            logging.getLogger(__name__).warning(
+                f'Blueprint {url_prefix} not available ({module_path}): {e}'
+            )
 
     # 健康检查
     @app.route('/api/health')

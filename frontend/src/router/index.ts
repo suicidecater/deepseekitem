@@ -14,7 +14,7 @@ const routes: RouteRecordRaw[] = [
   adminRoutes,
   {
     path: '/',
-    redirect: '/student/home'
+    redirect: '/login'
   },
   {
     path: '/forbidden',

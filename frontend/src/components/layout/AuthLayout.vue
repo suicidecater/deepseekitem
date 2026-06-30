@@ -23,10 +23,6 @@
               <span class="feature-icon">🎯</span>
               <span>精准学习路径</span>
             </div>
-            <div class="feature-item">
-              <span class="feature-icon">🏅</span>
-              <span>勋章激励系统</span>
-            </div>
           </div>
         </div>
       </div>

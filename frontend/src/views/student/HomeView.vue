@@ -4,24 +4,33 @@
 import { ref, onMounted, computed } from 'vue'
 import { useStudentStore } from '@/stores/student'
 import { useAuthStore } from '@/stores/auth'
+import { useAppStore } from '@/stores/app'
 import { useRouter } from 'vue-router'
 import { useSWR } from '@/composables/useSWR'
+import { get, put } from '@/api/request'
+import RadarChart from '@/components/charts/RadarChart.vue'
 
 const studentStore = useStudentStore()
 const authStore = useAuthStore()
+const appStore = useAppStore()
 const router = useRouter()
 
 const loading = ref(true)
+const switchingDirection = ref(false)
+const showDirectionModal = ref(false) // 新用户方向选择弹窗
+const newUserNoEval = computed(() => {
+  // 所有方向都没有测评记录 = 全新用户
+  const map = authStore.evaluationStatusMap
+  return Object.keys(map).length > 0 && Object.values(map).every(v => v === 0)
+})
 
 // #4 useSWR 缓存层包裹 dashboard 数据获取
 const userId = computed(() => authStore.userInfo?.userId ?? 'guest')
 const { data: swrDashboard, loading: swrLoading, error: swrError, fetch: fetchDashboard } = useSWR<any>(
   `dashboard-${userId.value}`,
   async () => {
-    const res = await fetch('/api/student/dashboard')
-    const json = await res.json()
-    if (json.code !== 0) throw new Error(json.message || '获取仪表盘数据失败')
-    return json.data
+    const res = await get<any>('/api/student/dashboard')
+    return res.data.data
   },
   30_000 // 30秒 TTL
 )
@@ -41,35 +50,83 @@ const welcomeInfo = computed(() => {
   }
 })
 
-// 科目大卡片入口（P0升级）
+// 当前学习方向
+const currentDirection = computed(() => authStore.studySubject)
+
+// 学习方向选择函数
+async function selectDirection(subject: 1 | 4 | 5) {
+  if (switchingDirection.value || subject === currentDirection.value) return
+  switchingDirection.value = true
+  try {
+    const res = await put('/api/student/study-direction', { study_subject: subject })
+    const json = res.data
+    if (json.code === 0) {
+      // 更新本地 auth store
+      if (authStore.userInfo) {
+        authStore.userInfo.studySubject = subject
+        // 更新该方向的测评状态（后端返回 needsEvaluation）
+        if (json.data?.needsEvaluation !== undefined) {
+          if (!authStore.userInfo.evaluationStatusMap) {
+            authStore.userInfo.evaluationStatusMap = {}
+          }
+          authStore.userInfo.evaluationStatusMap[String(subject)] = json.data.needsEvaluation ? 0 : 1
+        }
+      }
+      appStore.showToast(json.message || '方向已切换', 'success')
+      // 重新拉取仪表盘
+      await fetchDashboard()
+      // 如果新方向未测评，提示用户
+      if (json.data?.needsEvaluation) {
+        setTimeout(() => {
+          appStore.showToast('该方向尚未测评，请先完成能力基线测评', 'warning')
+        }, 500)
+      }
+    } else {
+      appStore.showToast(json.message || '切换失败', 'error')
+    }
+  } catch {
+    appStore.showToast('网络异常，请重试', 'error')
+  } finally {
+    switchingDirection.value = false
+  }
+}
+
+// 科目大卡片入口（P0升级 → 方向选择器）
 const subjectCards = computed(() => {
   const d = swrDashboard.value || studentStore.dashboard
+  const active = currentDirection.value
   return [
     {
       title: '科目一',
       subtitle: '小车理论',
       icon: '🚗',
+      value: 1 as const,
       progress: d?.subject1Progress ?? 75,
       color: '#1677FF',
       bg: '#E6F4FF',
+      active: active === 1,
       route: '/student/practice?subject=1'
     },
     {
       title: '科目四',
       subtitle: '安全文明',
       icon: '🔒',
+      value: 4 as const,
       progress: d?.subject4Progress ?? 40,
       color: '#52C41A',
       bg: '#F6FFED',
+      active: active === 4,
       route: '/student/practice?subject=4'
     },
     {
-      title: '从业资格证',
+      title: '专业人员',
       subtitle: '客运/货运/危化品',
       icon: '🚛',
+      value: 5 as const,
       progress: d?.transportProgress ?? 20,
       color: '#FA8C16',
       bg: '#FFF7E6',
+      active: active === 5,
       route: '/student/transport'
     }
   ]
@@ -92,7 +149,6 @@ const advantages = [
   { icon: '🎮', title: '场景模拟', desc: '交通场景实操' },
   { icon: '🔄', title: '易混训练', desc: '精准攻克难点' },
   { icon: '🔥', title: '热力图', desc: '学习轨迹追踪' },
-  { icon: '🏅', title: '勋章系统', desc: '游戏化激励' },
   { icon: '🤖', title: '教练AI建议', desc: '智能辅导' },
   { icon: '🚛', title: '运输培训', desc: '从业资格证备考' }
 ]
@@ -113,12 +169,27 @@ const todayTasks = ref([
   { id: 4, title: '错题回顾 - 易错题集', type: 'error_review', completed: false },
 ])
 
-// 能力雷达数据（Mock）
+// 能力雷达数据（Mock / 测评后来自 dashboard）
 const radarData = ref({
   dimensions: ['交通标志', '交通法规', '安全常识', '驾驶理论'],
   current: [82, 65, 78, 55],
-  baseline: [60, 60, 60, 60]
+  baseline: [90, 90, 90, 90]
 })
+
+const radarChartData = computed(() => [
+  {
+    label: '当前能力',
+    data: radarData.value.current,
+    color: '#1677FF',
+  },
+  {
+    label: '基准线',
+    data: radarData.value.baseline,
+    color: '#999',
+    fill: false,
+    dashed: true,
+  },
+])
 
 const showSprint = computed(() => {
   const d = swrDashboard.value || studentStore.dashboard
@@ -134,10 +205,46 @@ const coachInfo = ref({
   rate: 4.9
 })
 
+// 新用户方向选择弹窗相关
+const selectedModalDirection = ref<1 | 4 | 5>(1)
+
+const directionOptions = [
+  { title: '科目一', desc: '小车理论驾驶知识', icon: '🚗', value: 1 as const },
+  { title: '科目四', desc: '安全文明驾驶常识', icon: '🔒', value: 4 as const },
+  { title: '专业人员', desc: '客运/货运/危化品从业资格', icon: '🚛', value: 5 as const },
+]
+
+async function confirmDirectionSelection() {
+  const subject = selectedModalDirection.value
+  switchingDirection.value = true
+  try {
+    const res = await put('/api/student/study-direction', { study_subject: subject })
+    const json = res.data
+    if (json.code === 0) {
+      if (authStore.userInfo) {
+        authStore.userInfo.studySubject = subject
+      }
+      showDirectionModal.value = false
+      appStore.showToast('方向已设置，请先完成能力测评', 'success')
+      await fetchDashboard()
+    } else {
+      appStore.showToast(json.message || '设置失败', 'error')
+    }
+  } catch {
+    appStore.showToast('网络异常，请重试', 'error')
+  } finally {
+    switchingDirection.value = false
+  }
+}
+
 onMounted(async () => {
   loading.value = true
   try {
     await fetchDashboard() // #4 useSWR 缓存层
+    // 新用户首次登录（所有方向均未测评），弹出方向选择
+    if (newUserNoEval.value) {
+      setTimeout(() => { showDirectionModal.value = true }, 800)
+    }
   } catch {
     // 失败降级：useSWR 已设置 error，UI 展示降级状态
   }
@@ -178,18 +285,20 @@ onMounted(async () => {
         </div>
       </section>
 
-      <!-- 科目大卡片入口（P0升级） -->
+      <!-- 学习方向选择卡片（P0升级） -->
       <section class="subject-cards">
         <div
           v-for="card in subjectCards"
           :key="card.title"
           class="subject-card"
+          :class="{ active: card.active, switching: switchingDirection }"
           :style="{ '--card-color': card.color, '--card-bg': card.bg }"
-          @click="router.push(card.route)"
+          @click="selectDirection(card.value)"
         >
           <div class="card-header">
             <span class="card-icon">{{ card.icon }}</span>
             <span class="card-title">{{ card.title }}</span>
+            <span v-if="card.active" class="card-check">✅ 当前方向</span>
           </div>
           <p class="card-subtitle">{{ card.subtitle }}</p>
           <div class="card-progress">
@@ -198,9 +307,20 @@ onMounted(async () => {
             </div>
             <span class="progress-text">已学 {{ card.progress }}%</span>
           </div>
-          <button class="card-btn" :style="{ background: card.color }">开始练习</button>
+          <button class="card-btn" :style="{ background: card.color }">
+            {{ card.active ? '已选中' : '选择方向' }}
+          </button>
         </div>
       </section>
+
+      <!-- 未测评引导条 -->
+      <div v-if="authStore.needsEvaluation" class="eval-banner">
+        <span class="eval-banner-icon">⚠️</span>
+        <span class="eval-banner-text">请先完成能力基线测评，系统将根据测评结果为你定制个性化学习方案</span>
+        <button class="btn btn-primary btn-sm" @click="router.push('/student/evaluation')">
+          开始测评 →
+        </button>
+      </div>
 
       <!-- 主内容区：三栏布局 -->
       <div class="home-grid">
@@ -272,41 +392,18 @@ onMounted(async () => {
 
         <!-- 中间：雷达图 + 学车流程 -->
         <div class="home-center">
-          <!-- 四维能力雷达图 -->
+          <!-- 四维能力雷达图（Chart.js） -->
           <section class="card radar-card">
             <div class="card-title-row">
               <h3>能力雷达图</h3>
               <span class="text-muted" style="font-size:12px">四维评估</span>
             </div>
             <div class="radar-container">
-              <!-- 简化雷达图：CSS实现 -->
-              <div class="simple-radar">
-                <div class="radar-axis">
-                  <div
-                    v-for="(dim, idx) in radarData.dimensions"
-                    :key="dim"
-                    class="radar-dim"
-                    :style="{
-                      '--angle': `${(360 / radarData.dimensions.length) * idx}deg`,
-                      '--score': radarData.current[idx]
-                    }"
-                  >
-                    <div class="dim-bar-bg">
-                      <div
-                        class="dim-bar-fill"
-                        :style="{ width: radarData.current[idx] + '%' }"
-                        :class="{ low: radarData.current[idx] < 60 }"
-                      ></div>
-                    </div>
-                    <span class="dim-label">{{ dim }}</span>
-                    <span class="dim-score">{{ radarData.current[idx] }}分</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="radar-legend">
-              <span class="legend-dot" style="background:var(--color-primary)"></span> 当前能力
-              <span class="legend-dot" style="background:var(--color-border)"></span> 基准线(60)
+              <RadarChart
+                :dimensions="radarData.dimensions"
+                :datasets="radarChartData"
+                height="280"
+              />
             </div>
           </section>
 
@@ -394,6 +491,43 @@ onMounted(async () => {
         </p>
       </footer>
     </template>
+
+    <!-- 新用户方向选择弹窗 -->
+    <Teleport to="body">
+      <div v-if="showDirectionModal" class="modal-overlay" @click.self="showDirectionModal = false">
+        <div class="direction-modal">
+          <div class="modal-header">
+            <h2>选择学习方向</h2>
+            <p>请选择您要学习的方向，系统将为您定制专属学习方案</p>
+          </div>
+          <div class="modal-body">
+            <div
+              v-for="card in directionOptions"
+              :key="card.value"
+              class="direction-option"
+              :class="{ selected: selectedModalDirection === card.value }"
+              @click="selectedModalDirection = card.value"
+            >
+              <span class="option-icon">{{ card.icon }}</span>
+              <div class="option-info">
+                <span class="option-title">{{ card.title }}</span>
+                <span class="option-desc">{{ card.desc }}</span>
+              </div>
+              <span v-if="selectedModalDirection === card.value" class="option-check">✓</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              class="btn btn-primary modal-confirm-btn"
+              :disabled="switchingDirection"
+              @click="confirmDirectionSelection"
+            >
+              {{ switchingDirection ? '设置中...' : '确认选择' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -509,6 +643,33 @@ onMounted(async () => {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
 }
+.subject-card.active {
+  border-color: var(--card-color);
+  box-shadow: 0 0 0 3px var(--card-bg);
+}
+.subject-card.switching {
+  pointer-events: none;
+  opacity: 0.6;
+}
+.card-check {
+  font-size: 12px;
+  color: #52C41A;
+  font-weight: 600;
+}
+
+/* 未测评引导条 */
+.eval-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #FFF1F0, #FFF7E6);
+  border: 1px solid #FFCCC7;
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+}
+.eval-banner-icon { font-size: 20px; flex-shrink: 0; }
+.eval-banner-text { flex: 1; font-size: 14px; color: #8C1A1A; }
 
 .card-header {
   display: flex;
@@ -724,67 +885,9 @@ onMounted(async () => {
   border-radius: var(--radius-sm);
 }
 
-/* 雷达图（CSS简化版） */
+/* 雷达图容器 */
 .radar-container {
-  padding: 16px 0;
-}
-
-.simple-radar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.radar-dim {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dim-bar-bg {
-  flex: 1;
-  height: 10px;
-  background: #F0F0F0;
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.dim-bar-fill {
-  height: 100%;
-  background: var(--color-primary);
-  border-radius: 5px;
-  transition: width 0.8s ease;
-}
-.dim-bar-fill.low {
-  background: var(--color-warning);
-}
-
-.dim-label {
-  width: 64px;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  text-align: right;
-}
-
-.dim-score {
-  width: 36px;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  color: var(--color-primary);
-}
-
-.radar-legend {
-  display: flex;
-  gap: 16px;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  margin-top: 8px;
-}
-.legend-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  padding: 8px 0;
 }
 
 /* 学车流程 */
@@ -1000,5 +1103,133 @@ onMounted(async () => {
 }
 .footer-links a:hover {
   color: var(--color-primary);
+}
+
+/* ==================== 新用户方向选择弹窗 ==================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.direction-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  width: 440px;
+  max-width: 90vw;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.modal-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.modal-header p {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.direction-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--color-border-light);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: #FAFAFA;
+}
+
+.direction-option:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.direction-option.selected {
+  border-color: var(--color-primary);
+  background: #E6F4FF;
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1);
+}
+
+.option-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.option-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.option-desc {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.option-check {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.modal-footer {
+  text-align: center;
+}
+
+.modal-confirm-btn {
+  min-width: 180px;
+  padding: 12px 40px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
 }
 </style>
