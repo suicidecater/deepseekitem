@@ -287,9 +287,7 @@ export const handlers = [
     return HttpResponse.json({ code: 0, data: { daysUntilExam: 10, highFreqPoints: [], mockExams: [] } })
   }),
 
-  http.get('/api/question/confusing', () => {
-    return HttpResponse.json({ code: 0, data: { categories: ['交警手势', '扣分罚款', '交通标志', '综合'] } })
-  }),
+
 
   http.get('/api/student/progress', () => {
     const heatmapCells = Array.from({ length: 52 }, (_, i) => ({

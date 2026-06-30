@@ -19,8 +19,7 @@ class Knowledge(BaseModel):
     difficulty = db.Column(db.SmallInteger, default=1, comment='难度: 1简单/2中等/3困难')
     create_time = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
 
-    # 关系
-    questions = db.relationship('Question', backref='knowledge', lazy='dynamic')
+    # 关系（独立题库表无 know_id 外键，暂时移除 questions 关系）
     materials = db.relationship('Material', backref='knowledge', lazy='dynamic')
 
     def to_dict(self):

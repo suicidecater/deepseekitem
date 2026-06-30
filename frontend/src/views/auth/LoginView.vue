@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// src/views/auth/LoginView.vue
+// src/views/auth/LoginView.vue - 三种用户分开登录
 import { ref, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -11,121 +11,128 @@ const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
-// Tab 切换
-const activeTab = ref<'login' | 'register'>('login')
-const loginType = ref<'email' | 'phone'>('email')
-const loginMode = ref<'password' | 'code'>('password') // #2 新增：密码/验证码模式
-
-// 密码可见切换（#3）
+// 角色类型
+const roleType = ref<'student' | 'coach' | 'admin'>('student')
+const loginMode = ref<'password' | 'code'>('password')
 const passwordVisible = ref(false)
-const regPasswordVisible = ref(false)
-const regConfirmVisible = ref(false)
 
-// 验证码相关（#2）
+// 验证码
 const codeSending = ref(false)
 const codeCountdown = ref(0)
 let codeTimer: ReturnType<typeof setInterval> | null = null
 
 // 表单
-const loginForm = reactive({
-  account: '',
+const form = reactive({
+  email: '',
   password: '',
-  code: '' // #2 新增
-})
-
-const registerForm = reactive({
-  name: '',
-  account: '',
-  password: '',
-  confirmPassword: '',
-  agreeTerms: false
+  code: ''
 })
 
 const loading = ref(false)
-const loginErrors = reactive({ account: '', password: '', code: '' })
-const registerErrors = reactive({ name: '', account: '', password: '', confirmPassword: '', agreeTerms: '' })
+const errors = reactive({ email: '', password: '', code: '' })
 
-// 登录类型 label
-const accountLabel = computed(() => loginType.value === 'email' ? '邮箱' : '手机号')
-const accountPlaceholder = computed(() => loginType.value === 'email' ? '请输入邮箱地址' : '请输入手机号')
+// 角色配置
+const roleConfig = {
+  student: { label: '学员', icon: '🎓', color: '#1677ff', desc: '驾考/客运/货运/危险品' },
+  coach: { label: '教练', icon: '👨‍🏫', color: '#52c41a', desc: '驾校教练专属入口' },
+  admin: { label: '平台管理员', icon: '⚙️', color: '#fa8c16', desc: '后台管理系统' }
+}
 
-// #2 发送验证码
+const currentRole = computed(() => roleConfig[roleType.value])
+
+// 发送验证码
 async function sendCode() {
   if (codeCountdown.value > 0) return
-
-  // 校验账号
-  loginErrors.account = ''
-  if (!loginForm.account.trim()) {
-    loginErrors.account = `请输入${accountLabel.value}`
+  errors.email = ''
+  if (!form.email.trim()) {
+    errors.email = '请输入邮箱'
     return
   }
-  if (loginType.value === 'phone' && !/^1[3-9]\d{9}$/.test(loginForm.account)) {
-    loginErrors.account = '手机号格式不正确'
-    return
-  }
-  if (loginType.value === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginForm.account)) {
-    loginErrors.account = '邮箱格式不正确'
+  if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email)) {
+    errors.email = '邮箱格式不正确'
     return
   }
 
   codeSending.value = true
   try {
-    await fetch('/api/auth/send-code', {
+    const res = await fetch('/api/auth/send-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account: loginForm.account, loginType: loginType.value })
+      body: JSON.stringify({ email: form.email, type: 'login' })
     })
-    appStore.showToast('验证码已发送', 'success')
-
-    // 60秒倒计时
-    codeCountdown.value = 60
-    codeTimer = setInterval(() => {
-      codeCountdown.value--
-      if (codeCountdown.value <= 0) {
-        if (codeTimer) clearInterval(codeTimer)
-        codeTimer = null
-      }
-    }, 1000)
+    const json = await res.json()
+    if (json.code === 0) {
+      appStore.showToast('验证码已发送', 'success')
+    } else {
+      appStore.showToast(json.message || '发送失败', 'error')
+      return
+    }
   } catch {
     appStore.showToast('发送失败，请稍后重试', 'error')
+    return
   } finally {
     codeSending.value = false
   }
+
+  codeCountdown.value = 60
+  codeTimer = setInterval(() => {
+    codeCountdown.value--
+    if (codeCountdown.value <= 0) {
+      if (codeTimer) clearInterval(codeTimer)
+      codeTimer = null
+    }
+  }, 1000)
 }
 
-// Mock 登录
+// 登录 API 映射
+const loginApiMap: Record<string, string> = {
+  student: '/api/auth/student/login',
+  coach: '/api/auth/coach/login',
+  admin: '/api/auth/admin/login'
+}
+
+// 注册路由映射
+const registerRouteMap: Record<string, string> = {
+  student: '/register/student',
+  coach: '/register/coach',
+  admin: '/register/admin'
+}
+
+// 首页映射
+const homeRouteMap: Record<string, string> = {
+  student: '/student/home',
+  coach: '/coach/students',
+  admin: '/admin/users'
+}
+
 async function handleLogin() {
-  // 校验
-  loginErrors.account = ''
-  loginErrors.password = ''
-  loginErrors.code = ''
+  errors.email = ''
+  errors.password = ''
+  errors.code = ''
 
   let valid = true
-  if (!loginForm.account.trim()) {
-    loginErrors.account = `请输入${accountLabel.value}`
+  if (!form.email.trim()) {
+    errors.email = '请输入邮箱'
     valid = false
-  } else if (loginType.value === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginForm.account)) {
-    loginErrors.account = '邮箱格式不正确'
-    valid = false
-  } else if (loginType.value === 'phone' && !/^1[3-9]\d{9}$/.test(loginForm.account)) {
-    loginErrors.account = '手机号格式不正确'
+  } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email)) {
+    errors.email = '邮箱格式不正确'
     valid = false
   }
 
-  if (loginMode.value === 'code') {
-    if (!loginForm.code.trim()) {
-      loginErrors.code = '请输入验证码'
+  if (loginMode.value === 'password') {
+    if (!form.password) {
+      errors.password = '请输入密码'
       valid = false
-    } else if (loginForm.code.length < 4) {
-      loginErrors.code = '验证码至少4位'
+    } else if (form.password.length < 6) {
+      errors.password = '密码至少6位'
       valid = false
     }
   } else {
-    if (!loginForm.password) {
-      loginErrors.password = '请输入密码'
+    if (!form.code.trim()) {
+      errors.code = '请输入验证码'
       valid = false
-    } else if (loginForm.password.length < 6) {
-      loginErrors.password = '密码至少6位'
+    } else if (form.code.length < 4) {
+      errors.code = '验证码至少4位'
       valid = false
     }
   }
@@ -133,18 +140,14 @@ async function handleLogin() {
   if (!valid) return
 
   loading.value = true
-
   try {
-    // Mock API
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(loginApiMap[roleType.value], {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        account: loginForm.account,
-        password: loginMode.value === 'password' ? loginForm.password : undefined,
-        code: loginMode.value === 'code' ? loginForm.code : undefined,
-        loginType: loginType.value,
-        loginMode: loginMode.value
+        email: form.email,
+        password: loginMode.value === 'password' ? form.password : undefined,
+        code: loginMode.value === 'code' ? form.code : undefined
       })
     })
     const json = await res.json()
@@ -152,73 +155,10 @@ async function handleLogin() {
     if (json.code === 0) {
       authStore.setAuth(json.data)
       appStore.showToast('登录成功', 'success')
-
-      const redirect = (route.query.redirect as string) || '/student/home'
+      const redirect = (route.query.redirect as string) || homeRouteMap[roleType.value]
       router.push(redirect)
     } else {
       appStore.showToast(json.message || '登录失败', 'error')
-    }
-  } catch {
-    appStore.showToast('网络错误，请稍后重试', 'error')
-  } finally {
-    loading.value = false
-  }
-}
-
-// Mock 注册
-async function handleRegister() {
-  // 校验
-  registerErrors.name = ''
-  registerErrors.account = ''
-  registerErrors.password = ''
-  registerErrors.confirmPassword = ''
-  registerErrors.agreeTerms = ''
-
-  let valid = true
-  if (registerForm.name.trim().length < 2) {
-    registerErrors.name = '姓名至少2个字符'
-    valid = false
-  }
-  if (!registerForm.account.trim()) {
-    registerErrors.account = '请输入邮箱或手机号'
-    valid = false
-  }
-  if (!registerForm.password || registerForm.password.length < 6) {
-    registerErrors.password = '密码至少6位'
-    valid = false
-  }
-  if (registerForm.password !== registerForm.confirmPassword) {
-    registerErrors.confirmPassword = '两次密码不一致'
-    valid = false
-  }
-  if (!registerForm.agreeTerms) {
-    registerErrors.agreeTerms = '请同意用户协议'
-    valid = false
-  }
-
-  if (!valid) return
-
-  loading.value = true
-
-  try {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: registerForm.name,
-        account: registerForm.account,
-        password: registerForm.password,
-        registerType: loginType.value
-      })
-    })
-    const json = await res.json()
-
-    if (json.code === 0) {
-      authStore.setAuth(json.data)
-      appStore.showToast('注册成功', 'success')
-      router.push('/student/home')
-    } else {
-      appStore.showToast(json.message || '注册失败', 'error')
     }
   } catch {
     appStore.showToast('网络错误，请稍后重试', 'error')
@@ -231,36 +171,23 @@ async function handleRegister() {
 <template>
   <AuthLayout>
     <div class="auth-form">
-      <!-- Tab 切换 -->
-      <div class="auth-tabs">
+      <h2 class="form-title">用户登录</h2>
+
+      <!-- 角色选择卡片 -->
+      <div class="role-cards">
         <button
-          :class="{ active: activeTab === 'login' }"
-          class="tab-btn"
-          @click="activeTab = 'login'"
-        >登录</button>
-        <button
-          :class="{ active: activeTab === 'register' }"
-          class="tab-btn"
-          @click="activeTab = 'register'"
-        >注册</button>
+          v-for="(cfg, key) in roleConfig"
+          :key="key"
+          :class="['role-card', { active: roleType === key }]"
+          @click="roleType = key as 'student' | 'coach' | 'admin'"
+        >
+          <span class="role-icon">{{ cfg.icon }}</span>
+          <span class="role-name">{{ cfg.label }}</span>
+        </button>
       </div>
 
-      <!-- 登录类型切换 -->
-      <div class="login-type-tabs">
-        <button
-          :class="{ active: loginType === 'email' }"
-          class="type-btn"
-          @click="loginType = 'email'"
-        >邮箱登录</button>
-        <button
-          :class="{ active: loginType === 'phone' }"
-          class="type-btn"
-          @click="loginType = 'phone'"
-        >手机号登录</button>
-      </div>
-
-      <!-- 登录模式切换（密码/验证码）（#2） -->
-      <div v-if="activeTab === 'login'" class="login-mode-tabs">
+      <!-- 登录模式切换 -->
+      <div class="login-mode-tabs">
         <button
           :class="{ active: loginMode === 'password' }"
           class="mode-btn"
@@ -273,156 +200,69 @@ async function handleRegister() {
         >验证码登录</button>
       </div>
 
-      <!-- 登录表单 -->
-      <form v-if="activeTab === 'login'" class="form-body" @submit.prevent="handleLogin">
+      <!-- 表单 -->
+      <form class="form-body" @submit.prevent="handleLogin">
         <div class="form-group">
-          <label class="form-label">{{ accountLabel }}</label>
+          <label class="form-label">邮箱</label>
           <input
-            v-model="loginForm.account"
-            :type="loginType === 'email' ? 'email' : 'tel'"
-            :placeholder="accountPlaceholder"
+            v-model="form.email"
+            type="email"
+            placeholder="请输入邮箱地址"
             class="form-input"
-            :class="{ error: loginErrors.account }"
+            :class="{ error: errors.email }"
           />
-          <p v-if="loginErrors.account" class="form-error">{{ loginErrors.account }}</p>
+          <p v-if="errors.email" class="form-error">{{ errors.email }}</p>
         </div>
 
-        <!-- 密码登录模式 -->
-        <template v-if="loginMode === 'password'">
-          <div class="form-group">
-            <label class="form-label">密码</label>
-            <div class="password-wrapper">
-              <input
-                v-model="loginForm.password"
-                :type="passwordVisible ? 'text' : 'password'"
-                placeholder="请输入密码"
-                class="form-input"
-                :class="{ error: loginErrors.password }"
-              />
-              <button type="button" class="password-toggle" @click="passwordVisible = !passwordVisible" tabindex="-1">
-                {{ passwordVisible ? '🙈' : '👁' }}
-              </button>
-            </div>
-            <p v-if="loginErrors.password" class="form-error">{{ loginErrors.password }}</p>
-          </div>
-        </template>
-
-        <!-- 验证码登录模式（#2） -->
-        <template v-else>
-          <div class="form-group">
-            <label class="form-label">验证码</label>
-            <div class="code-row">
-              <input
-                v-model="loginForm.code"
-                type="text"
-                placeholder="请输入验证码"
-                class="form-input code-input"
-                :class="{ error: loginErrors.code }"
-                maxlength="6"
-              />
-              <button
-                type="button"
-                class="btn btn-outline code-btn"
-                :disabled="codeCountdown > 0 || codeSending"
-                @click="sendCode"
-              >
-                {{ codeCountdown > 0 ? `${codeCountdown}s后重发` : (codeSending ? '发送中...' : '发送验证码') }}
-              </button>
-            </div>
-            <p v-if="loginErrors.code" class="form-error">{{ loginErrors.code }}</p>
-          </div>
-        </template>
-
-        <div class="form-extra">
-          <label class="remember-me">
-            <input type="checkbox" /> 记住我
-          </label>
-          <a href="#" class="forgot-link">忘记密码？</a>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-lg btn-block" :disabled="loading">
-          {{ loading ? '登录中...' : '登 录' }}
-        </button>
-
-        <p class="form-tip">
-          还没有账号？<a href="#" @click.prevent="activeTab = 'register'">立即注册</a>
-        </p>
-      </form>
-
-      <!-- 注册表单 -->
-      <form v-else class="form-body" @submit.prevent="handleRegister">
-        <div class="form-group">
-          <label class="form-label">姓名</label>
-          <input
-            v-model="registerForm.name"
-            type="text"
-            placeholder="请输入真实姓名"
-            class="form-input"
-            :class="{ error: registerErrors.name }"
-          />
-          <p v-if="registerErrors.name" class="form-error">{{ registerErrors.name }}</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">{{ accountLabel }}</label>
-          <input
-            v-model="registerForm.account"
-            :type="loginType === 'email' ? 'email' : 'tel'"
-            :placeholder="accountPlaceholder"
-            class="form-input"
-            :class="{ error: registerErrors.account }"
-          />
-          <p v-if="registerErrors.account" class="form-error">{{ registerErrors.account }}</p>
-        </div>
-
-        <div class="form-group">
+        <!-- 密码模式 -->
+        <div v-if="loginMode === 'password'" class="form-group">
           <label class="form-label">密码</label>
           <div class="password-wrapper">
             <input
-              v-model="registerForm.password"
-              :type="regPasswordVisible ? 'text' : 'password'"
-              placeholder="请设置密码（至少6位）"
+              v-model="form.password"
+              :type="passwordVisible ? 'text' : 'password'"
+              placeholder="请输入密码"
               class="form-input"
-              :class="{ error: registerErrors.password }"
+              :class="{ error: errors.password }"
             />
-            <button type="button" class="password-toggle" @click="regPasswordVisible = !regPasswordVisible" tabindex="-1">
-              {{ regPasswordVisible ? '🙈' : '👁' }}
+            <button type="button" class="password-toggle" @click="passwordVisible = !passwordVisible" tabindex="-1">
+              {{ passwordVisible ? '🙈' : '👁' }}
             </button>
           </div>
-          <p v-if="registerErrors.password" class="form-error">{{ registerErrors.password }}</p>
+          <p v-if="errors.password" class="form-error">{{ errors.password }}</p>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">确认密码</label>
-          <div class="password-wrapper">
+        <!-- 验证码模式 -->
+        <div v-else class="form-group">
+          <label class="form-label">验证码</label>
+          <div class="code-row">
             <input
-              v-model="registerForm.confirmPassword"
-              :type="regConfirmVisible ? 'text' : 'password'"
-              placeholder="请再次输入密码"
-              class="form-input"
-              :class="{ error: registerErrors.confirmPassword }"
+              v-model="form.code"
+              type="text"
+              placeholder="请输入验证码"
+              class="form-input code-input"
+              :class="{ error: errors.code }"
+              maxlength="6"
             />
-            <button type="button" class="password-toggle" @click="regConfirmVisible = !regConfirmVisible" tabindex="-1">
-              {{ regConfirmVisible ? '🙈' : '👁' }}
+            <button
+              type="button"
+              class="btn btn-outline code-btn"
+              :disabled="codeCountdown > 0 || codeSending"
+              @click="sendCode"
+            >
+              {{ codeCountdown > 0 ? `${codeCountdown}s后重发` : (codeSending ? '发送中...' : '发送验证码') }}
             </button>
           </div>
-          <p v-if="registerErrors.confirmPassword" class="form-error">{{ registerErrors.confirmPassword }}</p>
-        </div>
-
-        <div class="form-group">
-          <label class="agree-terms">
-            <input v-model="registerForm.agreeTerms" type="checkbox" />
-            <span>我已阅读并同意 <a href="#">《用户服务协议》</a> 和 <a href="#">《隐私政策》</a></span>
-          </label>
-          <p v-if="registerErrors.agreeTerms" class="form-error">{{ registerErrors.agreeTerms }}</p>
+          <p v-if="errors.code" class="form-error">{{ errors.code }}</p>
         </div>
 
         <button type="submit" class="btn btn-primary btn-lg btn-block" :disabled="loading">
-          {{ loading ? '注册中...' : '注 册' }}
+          {{ loading ? '登录中...' : `登 录（${currentRole.label}）` }}
         </button>
 
         <p class="form-tip">
-          已有账号？<a href="#" @click.prevent="activeTab = 'login'">立即登录</a>
+          还没有{{ currentRole.label }}账号？
+          <a href="#" @click.prevent="router.push(registerRouteMap[roleType])">立即注册</a>
         </p>
       </form>
     </div>
@@ -432,56 +272,63 @@ async function handleRegister() {
 <style scoped>
 .auth-form {
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
 }
 
-.auth-tabs {
-  display: flex;
-  gap: 0;
+.form-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary);
   margin-bottom: 24px;
-  border-bottom: 2px solid var(--color-border-light);
 }
 
-.tab-btn {
-  flex: 1;
-  padding: 12px 0;
-  font-size: var(--font-size-lg);
-  font-weight: 500;
-  color: var(--color-text-tertiary);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: all var(--transition-fast);
-}
-.tab-btn.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
-}
-
-.login-type-tabs {
+/* 角色卡片 */
+.role-cards {
   display: flex;
-  gap: 8px;
-  margin-bottom: 28px;
-  background: var(--color-bg);
-  border-radius: var(--radius-md);
-  padding: 4px;
+  gap: 10px;
+  margin-bottom: 24px;
 }
 
-.type-btn {
+.role-card {
   flex: 1;
-  padding: 8px 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
-.type-btn.active {
-  background: #fff;
-  color: var(--color-primary);
-  font-weight: 500;
-  box-shadow: var(--shadow-sm);
+
+.role-card:hover {
+  border-color: var(--color-primary-light);
 }
 
-/* 登录模式切换（密码/验证码） */
+.role-card.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-lighter);
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1);
+}
+
+.role-icon {
+  font-size: 22px;
+}
+
+.role-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.role-card.active .role-name {
+  color: var(--color-primary);
+}
+
+/* 登录模式 */
 .login-mode-tabs {
   display: flex;
   gap: 0;
@@ -492,25 +339,70 @@ async function handleRegister() {
 .mode-btn {
   flex: 1;
   padding: 8px 0;
-  font-size: var(--font-size-sm);
+  font-size: 14px;
   color: var(--color-text-tertiary);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: all var(--transition-fast);
 }
+
 .mode-btn.active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
   font-weight: 500;
 }
 
-/* 密码可见切换（#3） */
+/* 表单 */
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.form-input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.form-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.form-input.error {
+  border-color: var(--color-error);
+}
+
+.form-error {
+  font-size: 12px;
+  color: var(--color-error);
+}
+
 .password-wrapper {
   position: relative;
 }
+
 .password-wrapper .form-input {
   padding-right: 44px;
+  width: 100%;
 }
+
 .password-toggle {
   position: absolute;
   right: 4px;
@@ -525,109 +417,34 @@ async function handleRegister() {
   opacity: 0.6;
   transition: opacity var(--transition-fast);
 }
-.password-toggle:hover {
-  opacity: 1;
-}
 
-/* 验证码行（#2） */
+.password-toggle:hover { opacity: 1; }
+
 .code-row {
   display: flex;
   gap: 10px;
 }
-.code-input {
-  flex: 1;
-}
+
+.code-input { flex: 1; }
+
 .code-btn {
   white-space: nowrap;
-  font-size: var(--font-size-xs);
+  font-size: 12px;
   padding: 0 14px;
   height: 44px;
   min-width: 110px;
 }
 
-.form-body {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.form-input {
-  height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-.form-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-.form-input.error {
-  border-color: var(--color-error);
-}
-
-.form-error {
-  font-size: var(--font-size-xs);
-  color: var(--color-error);
-}
-
-.form-extra {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.remember-me {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.forgot-link {
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-}
-
-.agree-terms {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  cursor: pointer;
-  line-height: 1.6;
-}
-.agree-terms a {
-  color: var(--color-primary);
-}
+.btn-block { margin-top: 4px; }
 
 .form-tip {
   text-align: center;
-  font-size: var(--font-size-sm);
+  font-size: 14px;
   color: var(--color-text-tertiary);
 }
+
 .form-tip a {
   color: var(--color-primary);
   font-weight: 500;
-}
-
-.btn-block {
-  margin-top: 4px;
 }
 </style>

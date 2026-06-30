@@ -42,9 +42,9 @@ export function setupGuards(router: Router) {
       return next({ name: 'Forbidden' })
     }
 
-    // 4. 全屏考试页特殊处理
-    if (to.meta.fullscreen) {
-      document.documentElement.requestFullscreen?.()
+    // 4. 学员未完成测评 → 强制跳转测评页
+    if (userRole === 'student' && authStore.needsEvaluation && to.name !== 'StudentEvaluation') {
+      return next({ name: 'StudentEvaluation', query: { required: '1' } })
     }
 
     next()

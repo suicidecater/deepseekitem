@@ -13,7 +13,7 @@ class BaseConfig:
 
     # MySQL 数据库
     DB_USER = os.environ.get('DB_USER', 'root')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'root123')
+    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'abc123')
     DB_HOST = os.environ.get('DB_HOST', '127.0.0.1')
     DB_PORT = os.environ.get('DB_PORT', '3306')
     DB_NAME = os.environ.get('DB_NAME', 'traffic_training')
@@ -40,7 +40,7 @@ class BaseConfig:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=2)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
-    JWT_TOKEN_LOCATION = ['headers']
+    JWT_TOKEN_LOCATION = ['headers', 'json']
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
     JWT_BLACKLIST_ENABLED = True
@@ -62,11 +62,12 @@ class BaseConfig:
     VERIFY_CODE_EXPIRE = 300  # 5分钟
     VERIFY_CODE_RATE_LIMIT = 60  # 60秒内同邮箱/手机号限发送1次
 
-    # QQ邮箱 SMTP
+    # QQ邮箱 SMTP（端口587 TLS加密）
     SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.qq.com')
     SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
-    SMTP_USER = os.environ.get('SMTP_USER', '')
-    SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+    SMTP_USER = os.environ.get('SMTP_USER', '2653745203@qq.com')
+    # QQ邮箱授权码（支持环境变量或使用平台默认授权码）
+    SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'binpnowrfnucecic')
 
     # 腾讯云短信 API（预留）
     TENCENT_SMS_SECRET_ID = os.environ.get('TENCENT_SMS_SECRET_ID', '')
@@ -78,7 +79,7 @@ class BaseConfig:
     DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
     DEEPSEEK_BASE_URL = os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com/v1')
     DEEPSEEK_MODEL = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')
-    DEEPSEEK_TIMEOUT = 3  # 超时3秒
+    DEEPSEEK_TIMEOUT = 60  # 超时60秒（流式响应需要更长时间）
     DEEPSEEK_MAX_RETRIES = 2
 
     # 接口限流
@@ -98,6 +99,18 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
     SQLALCHEMY_ECHO = True
     RATELIMIT_ENABLED = False
+    # 开发环境使用 MySQL（root/abc123）
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        'DEV_DATABASE_URL',
+        'mysql+pymysql://root:abc123@127.0.0.1:3306/traffic_training?charset=utf8mb4'
+    )
+    # MySQL 使用连接池
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 5,
+        'max_overflow': 10,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+    }
 
 
 class TestingConfig(BaseConfig):
@@ -114,6 +127,12 @@ class ProductionConfig(BaseConfig):
     SQLALCHEMY_ECHO = False
     RATELIMIT_ENABLED = True
     RATELIMIT_DEFAULT = '100 per minute'
+
+    def __init__(self):
+        if not os.environ.get('SECRET_KEY'):
+            raise RuntimeError('生产环境必须设置环境变量 SECRET_KEY')
+        if not os.environ.get('JWT_SECRET_KEY'):
+            raise RuntimeError('生产环境必须设置环境变量 JWT_SECRET_KEY')
 
 
 config_map = {

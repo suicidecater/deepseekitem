@@ -14,7 +14,7 @@ export function useSSE() {
     error.value = null
     abortController = new AbortController()
 
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/ai/chat/stream`, {
+    const response = await fetch(`/api/ai/chat/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -45,18 +45,29 @@ export function useSSE() {
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {
-          const event = JSON.parse(line.slice(6))
-          switch (event.type) {
-            case 'end':
+          const raw = line.slice(6).trim()
+          // 处理 [DONE] 结束标记
+          if (raw === '[DONE]') {
+            isStreaming.value = false
+            return ''
+          }
+          try {
+            const event = JSON.parse(raw)
+            if (event.error) {
+              error.value = event.error
               isStreaming.value = false
-              return event.structured
-            case 'error':
-              error.value = event.message
+              throw new Error(event.error)
+            }
+            // 兼容有/无 type 字段
+            if (event.type === 'end') {
               isStreaming.value = false
-              throw new Error(event.message)
-            case 'chunk':
+              return event.structured || ''
+            }
+            if (event.content) {
               yield event.content
-              break
+            }
+          } catch {
+            // 非 JSON 行跳过
           }
         }
       }

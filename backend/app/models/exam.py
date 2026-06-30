@@ -7,11 +7,15 @@ from . import BaseModel
 
 
 class Evaluation(BaseModel):
-    """能力测评表"""
+    """能力测评表（每人每方向仅一条记录）"""
     __tablename__ = 'evaluation'
+    __table_args__ = (
+        db.UniqueConstraint('student_id', 'study_subject', name='uq_student_subject_eval'),
+    )
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True, comment='测评ID')
     student_id = db.Column(db.BigInteger, db.ForeignKey('student.id'), nullable=False, index=True, comment='学员ID')
+    study_subject = db.Column(db.SmallInteger, default=1, nullable=False, comment='学习方向: 1科目一/4科目四/5专业人员')
     total_score = db.Column(db.Integer, default=0, comment='总分')
     sign_score = db.Column(db.Integer, default=0, comment='标志标线得分')
     law_score = db.Column(db.Integer, default=0, comment='法律法规得分')
@@ -19,12 +23,16 @@ class Evaluation(BaseModel):
     drive_score = db.Column(db.Integer, default=0, comment='驾驶操作得分')
     level = db.Column(db.String(16), nullable=True, comment='能力等级: 入门/基础/进阶/冲刺')
     weak_know = db.Column(db.Text, nullable=True, comment='薄弱知识点(JSON)')
+    simple_rate = db.Column(db.Integer, default=0, comment='简单题全局正确率(%)')
+    mid_rate = db.Column(db.Integer, default=0, comment='中等题全局正确率(%)')
+    diff_detail = db.Column(db.Text, nullable=True, comment='难度分层详情(JSON: 四维度×两难度)')
     create_time = db.Column(db.DateTime, default=datetime.now, comment='测评时间')
 
     def to_dict(self):
         return {
             'id': self.id,
             'student_id': self.student_id,
+            'study_subject': self.study_subject,
             'total_score': self.total_score,
             'sign_score': self.sign_score,
             'law_score': self.law_score,
@@ -32,6 +40,9 @@ class Evaluation(BaseModel):
             'drive_score': self.drive_score,
             'level': self.level,
             'weak_know': self.weak_know,
+            'simple_rate': self.simple_rate,
+            'mid_rate': self.mid_rate,
+            'diff_detail': self.diff_detail,
             'create_time': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
         }
 
@@ -67,4 +78,34 @@ class PracticeExam(BaseModel):
             'status': self.status,
             'create_time': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
             'end_time': self.end_time.strftime('%Y-%m-%d %H:%M:%S') if self.end_time else None,
+        }
+
+
+class AbilityAssessment(BaseModel):
+    """能力测评表"""
+    __tablename__ = 'ability_assessment'
+
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True, comment='测评ID')
+    student_id = db.Column(db.BigInteger, nullable=False, index=True, comment='关联student.id')
+    total_score = db.Column(db.Integer, nullable=False, comment='总分')
+    sign_score = db.Column(db.Integer, nullable=False, comment='交通标志得分')
+    law_score = db.Column(db.Integer, nullable=False, comment='交通法规得分')
+    safe_score = db.Column(db.Integer, nullable=False, comment='安全常识得分')
+    drive_score = db.Column(db.Integer, nullable=False, comment='驾驶理论得分')
+    level = db.Column(db.String(16), nullable=True, comment='能力等级')
+    weak_know = db.Column(db.Text, nullable=True, comment='薄弱方面')
+    create_time = db.Column(db.DateTime, default=datetime.now, comment='测评时间')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'studentId': self.student_id,
+            'totalScore': self.total_score,
+            'signScore': self.sign_score,
+            'lawScore': self.law_score,
+            'safeScore': self.safe_score,
+            'driveScore': self.drive_score,
+            'level': self.level,
+            'weakKnow': self.weak_know,
+            'createTime': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
         }
