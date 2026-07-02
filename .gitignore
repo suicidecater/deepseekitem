@@ -1,0 +1,38 @@
+node_modules/
+dist/
+.vite/
+*.local
+.DS_Store
+coverage/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.egg-info/
+
+# 测试脚本
+test_*.py
+test_*.html
+test_*.txt
+verify_*.py
+final_test_report.py
+db_check_result.txt
+
+# IDE
+.codebuddy/
+.playwright-cli/
+
+# 文档（非代码）
+需求分析*.doc
+需求分析*.txt
+需求分析*.md
+实训日志*.txt
+*-design.md
+frontend-architecture.md
+login.yaml
+
+# 截图/临时文件
+*.png
+2
